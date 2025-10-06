@@ -24,6 +24,7 @@ model Users {
   Password String    @db.VarChar(72)     @map("Password")
   Email    String    @db.VarChar(100)    @unique @map("Email")
   Role     Role                          @map("Role")
+  TokenVersion Int   @default(1)         @map("TokenVersion")
 
   // Relations
   Accounts Accounts[]

@@ -24,6 +24,7 @@ type JwtPayload = {
   sub: string;
   username: string;
   role: Role;
+  tokenVersion: number;
 };
 
 @Injectable()
@@ -54,6 +55,7 @@ export class AuthService {
         Email: input.email,
         Password: passwordHash,
         Role: 'user', // Always default to 'user' role for new sign ups
+        TokenVersion: 1,
       },
     });
 
@@ -61,6 +63,7 @@ export class AuthService {
       created.UserID,
       created.Username,
       created.Role,
+      created.TokenVersion,
     );
     return { user: created, access_token: token };
   }
@@ -83,12 +86,28 @@ export class AuthService {
     )) as boolean;
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    const token: string = this.signToken(user.UserID, user.Username, user.Role);
+    // Rotate token version on each successful login
+    const updated: Users = await this.prisma.users.update({
+      where: { UserID: user.UserID },
+      data: { TokenVersion: (user.TokenVersion ?? 1) + 1 },
+    });
+
+    const token: string = this.signToken(
+      updated.UserID,
+      updated.Username,
+      updated.Role,
+      updated.TokenVersion,
+    );
     return { user, access_token: token };
   }
 
-  private signToken(userId: string, username: string, role: Role): string {
-    const payload: JwtPayload = { sub: userId, username, role };
+  private signToken(
+    userId: string,
+    username: string,
+    role: Role,
+    tokenVersion: number,
+  ): string {
+    const payload: JwtPayload = { sub: userId, username, role, tokenVersion };
     return this.jwt.sign(payload);
   }
 }
