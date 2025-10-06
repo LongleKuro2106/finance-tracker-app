@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  administrator
+  user
+}
+
+model Users {
+  UserID   String    @id @default(uuid()) @map("UserID") @db.Uuid
+  Username String    @db.VarChar(50)     @unique @map("Username")
+  Password String    @db.VarChar(72)     @map("Password")
+  Email    String    @db.VarChar(100)    @unique @map("Email")
+  Role     Role                          @map("Role")
+
+  // Relations
+  Accounts Accounts[]
+  Budgets  Budgets[]
+
+  @@map("Users")
+}
+
+model Accounts {
+  AccountID   Int            @id @default(autoincrement()) @map("AccountID")
+  UserID      String?        @map("UserID") @db.Uuid
+  AccountName String         @db.VarChar(100)              @map("AccountName")
+  Balance     Decimal        @db.Decimal(15, 2)            @map("Balance")
+
+  // Relations
+  User         Users?         @relation(fields: [UserID], references: [UserID])
+  Transactions Transactions[]
+
+  @@map("Accounts")
+}
+
+model Transactions {
+  TransactionID  Int       @id @default(autoincrement()) @map("TransactionID")
+  AccountID      Int       @map("AccountID")
+  Amount         Decimal   @db.Decimal(15, 2)            @map("Amount")
+  TransactionDate DateTime @map("TransactionDate")
+  Category       String?   @db.VarChar(50)               @map("Category")
+  Description    String?   @db.Text                      @map("Description")
+
+  // Relations
+  Account Accounts @relation(fields: [AccountID], references: [AccountID])
+
+  @@map("Transactions")
+}
+
+model Categories {
+  CategoryID   Int       @id @default(autoincrement()) @map("CategoryID")
+  CategoryName String    @db.VarChar(50)               @map("CategoryName")
+
+  // Relations
+  Budgets Budgets[]
+
+  @@map("Categories")
+}
+
+model Budgets {
+  BudgetID  Int      @id @default(autoincrement()) @map("BudgetID")
+  UserID    String?  @map("UserID") @db.Uuid
+  CategoryID Int?    @map("CategoryID")
+  Amount    Decimal  @db.Decimal(15, 2)            @map("Amount")
+
+  // Relations
+  User     Users?      @relation(fields: [UserID], references: [UserID])
+  Category Categories? @relation(fields: [CategoryID], references: [CategoryID])
+
+  @@map("Budgets")
+}
