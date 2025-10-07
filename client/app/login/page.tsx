@@ -1,81 +1,93 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+const LoginSchema = z.object({
+  usernameOrEmail: z.string().min(1, 'Username or email is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+})
+
+type LoginValues = z.infer<typeof LoginSchema>
 
 const LoginPage = () => {
   const router = useRouter()
-  const [usernameOrEmail, setUsernameOrEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: { usernameOrEmail: '', password: '' },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usernameOrEmail, password }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.message ?? 'Login failed')
-      }
-      router.replace('/dashboard')
-      router.refresh()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed')
-    } finally {
-      setLoading(false)
+  const onSubmit = async (values: LoginValues) => {
+    setSubmitError('')
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setSubmitError(data?.message ?? 'Login failed')
+      return
     }
+    router.replace('/dashboard')
+    router.refresh()
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 space-y-4"
         aria-label="Login form"
       >
         <h1 className="text-xl font-semibold">Login</h1>
-        {error && (
+        {submitError && (
           <div className="text-red-600 text-sm" role="alert" aria-live="polite">
-            {error}
+            {submitError}
           </div>
         )}
         <label className="block">
-          <span className="block text-sm mb-1">Username or Email</span>
-          <input
+          <Label className="mb-1 block">Username or Email</Label>
+          <Input
             type="text"
-            value={usernameOrEmail}
-            onChange={(e) => setUsernameOrEmail(e.target.value)}
-            className="w-full border border-neutral-300 dark:border-neutral-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-800"
-            required
-            aria-label="Username or Email"
+            {...register('usernameOrEmail')}
+            aria-invalid={!!errors.usernameOrEmail}
+            aria-describedby={errors.usernameOrEmail ? 'usernameOrEmail-error' : undefined}
           />
+          {errors.usernameOrEmail && (
+            <p id="usernameOrEmail-error" className="text-xs text-red-600 mt-1">
+              {errors.usernameOrEmail.message}
+            </p>
+          )}
         </label>
         <label className="block">
-          <span className="block text-sm mb-1">Password</span>
-          <input
+          <Label className="mb-1 block">Password</Label>
+          <Input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-neutral-300 dark:border-neutral-700 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-neutral-800"
-            required
-            aria-label="Password"
+            {...register('password')}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? 'password-error' : undefined}
           />
+          {errors.password && (
+            <p id="password-error" className="text-xs text-red-600 mt-1">
+              {errors.password.message}
+            </p>
+          )}
         </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full h-10 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-          aria-busy={loading}
-        >
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
+        <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="w-full">
+          {isSubmitting ? 'Logging in...' : 'Login'}
+        </Button>
         <div className="text-sm text-neutral-600 dark:text-neutral-400">
           No account? <a className="underline" href="/signup">Sign up</a>
         </div>

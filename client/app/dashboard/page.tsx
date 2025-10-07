@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import SignOutButton from './signout'
+import SignOutButton from '../../components/signout'
 import { decodeJwt } from '@/lib/utils'
 
 const DashboardPage = async () => {
