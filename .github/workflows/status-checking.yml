@@ -4,7 +4,10 @@ on:
   push:
     branches:
       - main
-
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+    
 jobs:
   simple_status_checking_pipeline:
     runs-on: ubuntu-latest
