@@ -18,6 +18,11 @@ enum Role {
   user
 }
 
+enum TransactionType {
+  expense
+  income
+}
+
 model Users {
   UserID   String    @id @default(uuid()) @map("UserID") @db.Uuid
   Username String    @db.VarChar(50)     @unique @map("Username")
@@ -27,35 +32,23 @@ model Users {
   TokenVersion Int   @default(1)         @map("TokenVersion")
 
   // Relations
-  Accounts Accounts[]
-  Budgets  Budgets[]
+  Transactions Transactions[]
+  Budgets      Budgets[]
 
   @@map("Users")
 }
 
-model Accounts {
-  AccountID   Int            @id @default(autoincrement()) @map("AccountID")
-  UserID      String?        @map("UserID") @db.Uuid
-  AccountName String         @db.VarChar(100)              @map("AccountName")
-  Balance     Decimal        @db.Decimal(15, 2)            @map("Balance")
-
-  // Relations
-  User         Users?         @relation(fields: [UserID], references: [UserID])
-  Transactions Transactions[]
-
-  @@map("Accounts")
-}
-
 model Transactions {
   TransactionID  Int       @id @default(autoincrement()) @map("TransactionID")
-  AccountID      Int       @map("AccountID")
+  UserID         String    @map("UserID") @db.Uuid
   Amount         Decimal   @db.Decimal(15, 2)            @map("Amount")
+  Type           TransactionType                          @map("Type")
   TransactionDate DateTime @map("TransactionDate")
   Category       String?   @db.VarChar(50)               @map("Category")
   Description    String?   @db.Text                      @map("Description")
 
   // Relations
-  Account Accounts @relation(fields: [AccountID], references: [AccountID])
+  User Users @relation(fields: [UserID], references: [UserID])
 
   @@map("Transactions")
 }
