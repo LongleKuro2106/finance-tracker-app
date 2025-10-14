@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Prisma, TransactionType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
@@ -49,9 +49,10 @@ export class TransactionsService {
       data: {
         UserID: userId,
         Amount: dto.amount,
-        Type: dto.type as TransactionType,
+        Type: dto.type,
         TransactionDate: new Date(dto.transactionDate),
-        Category: dto.category ?? null,
+        DefaultCategory: dto.defaultCategory ?? null,
+        CategoryID: dto.categoryId ?? null,
         Description: dto.description ?? null,
       },
     });
@@ -69,13 +70,14 @@ export class TransactionsService {
       where: { TransactionID: id },
       data: {
         ...(dto.amount !== undefined ? { Amount: dto.amount } : {}),
-        ...(dto.type !== undefined
-          ? { Type: dto.type as TransactionType }
-          : {}),
+        ...(dto.type !== undefined ? { Type: dto.type } : {}),
         ...(dto.transactionDate !== undefined
           ? { TransactionDate: new Date(dto.transactionDate) }
           : {}),
-        ...(dto.category !== undefined ? { Category: dto.category } : {}),
+        ...(dto.defaultCategory !== undefined
+          ? { DefaultCategory: dto.defaultCategory }
+          : {}),
+        ...(dto.categoryId !== undefined ? { CategoryID: dto.categoryId } : {}),
         ...(dto.description !== undefined
           ? { Description: dto.description }
           : {}),

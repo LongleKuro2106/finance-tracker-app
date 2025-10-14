@@ -23,6 +23,26 @@ enum TransactionType {
   income
 }
 
+enum DefaultCategory {
+  groceries
+  transport
+  utilities
+  entertainment
+  shopping
+  healthcare
+  housing
+  salary
+  investment
+  other
+}
+
+enum RecurrenceType {
+  none
+  weekly
+  monthly
+  yearly
+}
+
 model Users {
   UserID   String    @id @default(uuid()) @map("UserID") @db.Uuid
   Username String    @db.VarChar(50)     @unique @map("Username")
@@ -34,6 +54,7 @@ model Users {
   // Relations
   Transactions Transactions[]
   Budgets      Budgets[]
+  Categories   Categories[]
 
   @@map("Users")
 }
@@ -42,36 +63,46 @@ model Transactions {
   TransactionID  Int       @id @default(autoincrement()) @map("TransactionID")
   UserID         String    @map("UserID") @db.Uuid
   Amount         Decimal   @db.Decimal(15, 2)            @map("Amount")
-  Type           TransactionType                          @map("Type")
-  TransactionDate DateTime @map("TransactionDate")
-  Category       String?   @db.VarChar(50)               @map("Category")
+  Type           TransactionType                         @map("Type")
+  TransactionDate DateTime @default(now())               @map("TransactionDate")
   Description    String?   @db.Text                      @map("Description")
+  DefaultCategory DefaultCategory?                       @map("DefaultCategory")
+  CategoryID     Int?                                     @map("CategoryID")
 
   // Relations
-  User Users @relation(fields: [UserID], references: [UserID])
+  Category     Categories?  @relation(fields: [CategoryID], references: [CategoryID])
+  User         Users        @relation(fields: [UserID], references: [UserID])
 
   @@map("Transactions")
 }
 
 model Categories {
   CategoryID   Int       @id @default(autoincrement()) @map("CategoryID")
+  UserID       String?   @map("UserID") @db.Uuid
   CategoryName String    @db.VarChar(50)               @map("CategoryName")
+  CreatedAt    DateTime  @default(now())               @map("CreatedAt")
 
   // Relations
-  Budgets Budgets[]
+  User          Users?         @relation(fields: [UserID], references: [UserID])
+  Transactions  Transactions[]
+  Budgets       Budgets[]
 
   @@map("Categories")
 }
 
 model Budgets {
-  BudgetID  Int      @id @default(autoincrement()) @map("BudgetID")
-  UserID    String?  @map("UserID") @db.Uuid
-  CategoryID Int?    @map("CategoryID")
-  Amount    Decimal  @db.Decimal(15, 2)            @map("Amount")
+  BudgetID     Int             @id @default(autoincrement()) @map("BudgetID")
+  UserID       String          @map("UserID") @db.Uuid
+  CategoryID   Int?            @map("CategoryID")
+  Amount       Decimal         @db.Decimal(15, 2)            @map("Amount")
+  PeriodStart  DateTime        @map("PeriodStart")
+  PeriodEnd    DateTime        @map("PeriodEnd")
+  Recurrence   RecurrenceType  @default(monthly)             @map("Recurrence")
+  CreatedAt    DateTime        @default(now())               @map("CreatedAt")
 
   // Relations
-  User     Users?      @relation(fields: [UserID], references: [UserID])
-  Category Categories? @relation(fields: [CategoryID], references: [CategoryID])
+  User         Users           @relation(fields: [UserID], references: [UserID])
+  Category     Categories?     @relation(fields: [CategoryID], references: [CategoryID])
 
   @@map("Budgets")
 }

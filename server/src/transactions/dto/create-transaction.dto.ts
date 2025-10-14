@@ -1,12 +1,15 @@
 import {
   IsDateString,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  MaxLength,
   Min,
+  IsPositive,
+  IsIn,
 } from 'class-validator';
+import { DefaultCategory } from '@prisma/client';
 
 export class CreateTransactionDto {
   @IsNumber()
@@ -18,9 +21,13 @@ export class CreateTransactionDto {
   transactionDate!: string; // ISO string
 
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  category?: string;
+  @IsIn(Object.values(DefaultCategory))
+  defaultCategory?: DefaultCategory;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  categoryId?: number;
 
   @IsOptional()
   @IsString()
