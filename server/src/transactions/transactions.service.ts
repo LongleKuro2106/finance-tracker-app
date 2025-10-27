@@ -89,8 +89,13 @@ export class TransactionsService {
         },
       });
       return updated;
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('Transaction not found or unauthorized');
       }
       throw error;
@@ -106,8 +111,13 @@ export class TransactionsService {
         },
       });
       return { ok: true };
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('Transaction not found or unauthorized');
       }
       throw error;

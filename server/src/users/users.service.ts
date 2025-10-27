@@ -43,8 +43,13 @@ export class UsersService {
         },
       });
       return user;
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('User not found');
       }
       throw error;
@@ -57,8 +62,13 @@ export class UsersService {
         where: { UserID: id }
       });
       return removed;
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException('User not found');
       }
       throw error;
