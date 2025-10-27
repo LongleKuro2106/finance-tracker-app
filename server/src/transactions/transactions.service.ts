@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -33,7 +29,16 @@ export class TransactionsService {
       orderBy: { TransactionID: 'asc' },
       take: pageSize + 1,
       ...(cursor ? { cursor, skip: 1 } : {}),
-      // no include needed; linked directly to user
+      include: {
+        Category: true, // Include custom category if exists
+        User: {
+          select: {
+            UserID: true,
+            Username: true,
+            Email: true,
+          },
+        },
+      },
     });
 
     const hasNext = items.length > pageSize;
@@ -60,40 +65,52 @@ export class TransactionsService {
   }
 
   async updateForUser(userId: string, id: number, dto: UpdateTransactionDto) {
-    const existing = await this.prisma.transactions.findUnique({
-      where: { TransactionID: id },
-    });
-    if (!existing) throw new NotFoundException('Transaction not found');
-    if (existing.UserID !== userId) throw new UnauthorizedException();
-
-    const updated = await this.prisma.transactions.update({
-      where: { TransactionID: id },
-      data: {
-        ...(dto.amount !== undefined ? { Amount: dto.amount } : {}),
-        ...(dto.type !== undefined ? { Type: dto.type } : {}),
-        ...(dto.transactionDate !== undefined
-          ? { TransactionDate: new Date(dto.transactionDate) }
-          : {}),
-        ...(dto.defaultCategory !== undefined
-          ? { DefaultCategory: dto.defaultCategory }
-          : {}),
-        ...(dto.categoryId !== undefined ? { CategoryID: dto.categoryId } : {}),
-        ...(dto.description !== undefined
-          ? { Description: dto.description }
-          : {}),
-      },
-    });
-    return updated;
+    try {
+      const updated = await this.prisma.transactions.update({
+        where: {
+          TransactionID: id,
+          UserID: userId, // Ensure user owns the transaction
+        },
+        data: {
+          ...(dto.amount !== undefined ? { Amount: dto.amount } : {}),
+          ...(dto.type !== undefined ? { Type: dto.type } : {}),
+          ...(dto.transactionDate !== undefined
+            ? { TransactionDate: new Date(dto.transactionDate) }
+            : {}),
+          ...(dto.defaultCategory !== undefined
+            ? { DefaultCategory: dto.defaultCategory }
+            : {}),
+          ...(dto.categoryId !== undefined
+            ? { CategoryID: dto.categoryId }
+            : {}),
+          ...(dto.description !== undefined
+            ? { Description: dto.description }
+            : {}),
+        },
+      });
+      return updated;
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Transaction not found or unauthorized');
+      }
+      throw error;
+    }
   }
 
   async deleteForUser(userId: string, id: number) {
-    const existing = await this.prisma.transactions.findUnique({
-      where: { TransactionID: id },
-    });
-    if (!existing) throw new NotFoundException('Transaction not found');
-    if (existing.UserID !== userId) throw new UnauthorizedException();
-
-    await this.prisma.transactions.delete({ where: { TransactionID: id } });
-    return { ok: true };
+    try {
+      await this.prisma.transactions.delete({
+        where: {
+          TransactionID: id,
+          UserID: userId, // Ensure user owns the transaction
+        },
+      });
+      return { ok: true };
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Transaction not found or unauthorized');
+      }
+      throw error;
+    }
   }
 }
