@@ -10,9 +10,9 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
-import * as authenticatedUserInterface from './types/authenticated-user.interface';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
 
 @Controller('auth')
 export class AuthController {

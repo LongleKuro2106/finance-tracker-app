@@ -119,6 +119,7 @@ export class AuthService {
     return {
       username: user.Username,
       userId: user.UserID,
+      email: user.Email,
     };
   }
 

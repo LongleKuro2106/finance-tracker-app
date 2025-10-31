@@ -4,7 +4,7 @@ import { Strategy } from 'passport-jwt';
 import type { JwtFromRequestFunction } from 'passport-jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthenticatedUser } from './types/authenticated-user.interface';
+import { AuthenticatedUser } from '../common/types/authenticated-user.interface';
 import { Role } from '@prisma/client';
 
 @Injectable()
