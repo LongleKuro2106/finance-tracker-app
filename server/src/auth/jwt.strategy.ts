@@ -5,7 +5,6 @@ import type { JwtFromRequestFunction } from 'passport-jwt';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from '../common/types/authenticated-user.interface';
-import { Role } from '@prisma/client';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -34,19 +33,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: {
     sub: string;
     username: string;
-    role: Role;
     tokenVersion: number;
   }): Promise<AuthenticatedUser> {
-    const user = await this.prisma.users.findUnique({
-      where: { UserID: payload.sub },
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
     });
     if (!user) throw new UnauthorizedException();
-    if ((user.TokenVersion ?? 1) !== payload.tokenVersion)
+    if ((user.tokenVersion ?? 1) !== payload.tokenVersion)
       throw new UnauthorizedException();
     return {
       userId: payload.sub,
       username: payload.username,
-      role: payload.role,
     };
   }
 }

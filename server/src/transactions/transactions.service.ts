@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { CategoriesService } from '../categories/categories.service';
 
 interface ListOptions {
   cursor?: string;
@@ -11,31 +12,32 @@ interface ListOptions {
 
 @Injectable()
 export class TransactionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
   async listUserTransactions(userId: string, opts: ListOptions) {
     const pageSize = Math.max(1, Math.min(opts?.limit ?? 20, 100));
 
-    const where: Prisma.TransactionsWhereInput = {
-      UserID: userId,
+    const where: Prisma.TransactionWhereInput = {
+      userId: userId,
     };
 
-    const cursor = opts?.cursor
-      ? { TransactionID: Number(opts.cursor) }
-      : undefined;
+    const cursor = opts?.cursor ? { id: Number(opts.cursor) } : undefined;
 
-    const items = await this.prisma.transactions.findMany({
+    const items = await this.prisma.transaction.findMany({
       where,
-      orderBy: { TransactionID: 'asc' },
+      orderBy: { id: 'desc' }, // Most recent first
       take: pageSize + 1,
       ...(cursor ? { cursor, skip: 1 } : {}),
       include: {
-        Category: true, // Include custom category if exists
-        User: {
+        category: true, // Include category if exists
+        user: {
           select: {
-            UserID: true,
-            Username: true,
-            Email: true,
+            id: true,
+            username: true,
+            email: true,
           },
         },
       },
@@ -43,22 +45,35 @@ export class TransactionsService {
 
     const hasNext = items.length > pageSize;
     const data = hasNext ? items.slice(0, pageSize) : items;
-    const nextCursor = hasNext
-      ? String(data[data.length - 1]?.TransactionID)
-      : null;
+    const nextCursor = hasNext ? String(data[data.length - 1]?.id) : null;
     return { data, nextCursor, pageSize };
   }
 
   async createForUser(userId: string, dto: CreateTransactionDto) {
-    const created = await this.prisma.transactions.create({
+    // Normalize date to start of day (00:00:00Z) for date-only storage
+    const transactionDate = new Date(dto.date);
+    transactionDate.setUTCHours(0, 0, 0, 0);
+
+    // Resolve category name to ID if provided
+    let categoryId: number | null = null;
+    if (dto.categoryName) {
+      const category = await this.categoriesService.findByName(
+        dto.categoryName,
+      );
+      categoryId = category.id;
+    }
+
+    const created = await this.prisma.transaction.create({
       data: {
-        UserID: userId,
-        Amount: dto.amount,
-        Type: dto.type,
-        TransactionDate: new Date(dto.transactionDate),
-        DefaultCategory: dto.defaultCategory ?? null,
-        CategoryID: dto.categoryId ?? null,
-        Description: dto.description ?? null,
+        userId: userId,
+        amount: dto.amount,
+        type: dto.type,
+        date: transactionDate,
+        categoryId: categoryId,
+        description: dto.description ?? null,
+      },
+      include: {
+        category: true,
       },
     });
     return created;
@@ -66,26 +81,53 @@ export class TransactionsService {
 
   async updateForUser(userId: string, id: number, dto: UpdateTransactionDto) {
     try {
-      const updated = await this.prisma.transactions.update({
+      // First verify the transaction exists and belongs to the user
+      const existing = await this.prisma.transaction.findFirst({
         where: {
-          TransactionID: id,
-          UserID: userId, // Ensure user owns the transaction
+          id: id,
+          userId: userId,
         },
-        data: {
-          ...(dto.amount !== undefined ? { Amount: dto.amount } : {}),
-          ...(dto.type !== undefined ? { Type: dto.type } : {}),
-          ...(dto.transactionDate !== undefined
-            ? { TransactionDate: new Date(dto.transactionDate) }
-            : {}),
-          ...(dto.defaultCategory !== undefined
-            ? { DefaultCategory: dto.defaultCategory }
-            : {}),
-          ...(dto.categoryId !== undefined
-            ? { CategoryID: dto.categoryId }
-            : {}),
-          ...(dto.description !== undefined
-            ? { Description: dto.description }
-            : {}),
+      });
+
+      if (!existing) {
+        throw new NotFoundException('Transaction not found or unauthorized');
+      }
+
+      const updateData: Prisma.TransactionUpdateInput = {};
+
+      if (dto.amount !== undefined) {
+        updateData.amount = dto.amount;
+      }
+      if (dto.type !== undefined) {
+        updateData.type = dto.type;
+      }
+      if (dto.date !== undefined) {
+        // Normalize date to start of day
+        const transactionDate = new Date(dto.date);
+        transactionDate.setUTCHours(0, 0, 0, 0);
+        updateData.date = transactionDate;
+      }
+      if (dto.categoryName !== undefined) {
+        if (dto.categoryName === null) {
+          updateData.category = { disconnect: true };
+        } else {
+          const category = await this.categoriesService.findByName(
+            dto.categoryName,
+          );
+          updateData.category = { connect: { id: category.id } };
+        }
+      }
+      if (dto.description !== undefined) {
+        updateData.description = dto.description ?? null;
+      }
+
+      const updated = await this.prisma.transaction.update({
+        where: {
+          id: id,
+        },
+        data: updateData,
+        include: {
+          category: true,
         },
       });
       return updated;
@@ -104,10 +146,22 @@ export class TransactionsService {
 
   async deleteForUser(userId: string, id: number) {
     try {
-      await this.prisma.transactions.delete({
+      // First verify the transaction exists and belongs to the user
+      const existing = await this.prisma.transaction.findFirst({
         where: {
-          TransactionID: id,
-          UserID: userId, // Ensure user owns the transaction
+          id: id,
+          userId: userId,
+        },
+      });
+
+      if (!existing) {
+        throw new NotFoundException('Transaction not found or unauthorized');
+      }
+
+      // Hard delete the transaction
+      await this.prisma.transaction.delete({
+        where: {
+          id: id,
         },
       });
       return { ok: true };

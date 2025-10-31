@@ -1,45 +1,76 @@
-/* eslint-disable prettier/prettier */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { hash } from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(role?: Role) {
-    const users = await this.prisma.users.findMany({
-      where: role ? { Role: role } : undefined,
-      orderBy: { UserID: 'asc' },
+  async findAll() {
+    const users = await this.prisma.user.findMany({
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    if (role && users.length === 0) {
-      throw new NotFoundException('No users with this role found');
-    }
     return users;
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.users.findUnique({
-      where: { UserID: id },
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
   async findByUsername(username: string) {
-    return this.prisma.users.findFirst({ where: { Username: username } });
+    return this.prisma.user.findFirst({ where: { username } });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
-      const user = await this.prisma.users.update({
-        where: { UserID: id },
-        data: {
-          Username: updateUserDto.username,
-          Password: updateUserDto.password,
-          Email: updateUserDto.email,
-          Role: updateUserDto.role,
+      const updateData: {
+        username?: string;
+        email?: string;
+        passwordHash?: string;
+      } = {};
+
+      if (updateUserDto.username !== undefined) {
+        updateData.username = updateUserDto.username;
+      }
+      if (updateUserDto.email !== undefined) {
+        updateData.email = updateUserDto.email;
+      }
+      if (updateUserDto.password !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        updateData.passwordHash = (await hash(
+          updateUserDto.password,
+          10,
+        )) as string;
+      }
+
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
       return user;
@@ -58,8 +89,8 @@ export class UsersService {
 
   async delete(id: string) {
     try {
-      const removed = await this.prisma.users.delete({
-        where: { UserID: id }
+      const removed = await this.prisma.user.delete({
+        where: { id },
       });
       return removed;
     } catch (error: unknown) {

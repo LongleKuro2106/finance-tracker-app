@@ -1,9 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// --------------------
+// Prisma Configuration
+// --------------------
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,96 +10,78 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  administrator
-  user
-}
-
+// --------------------
+// ENUMS
+// --------------------
 enum TransactionType {
-  expense
   income
+  expense
 }
 
-enum DefaultCategory {
-  groceries
-  transport
-  utilities
-  entertainment
-  shopping
-  healthcare
-  housing
-  salary
-  investment
-  other
-}
+// --------------------
+// MODELS
+// --------------------
 
-enum RecurrenceType {
-  none
-  weekly
-  monthly
-  yearly
-}
-
-model Users {
-  UserID   String    @id @default(uuid()) @map("UserID") @db.Uuid
-  Username String    @db.VarChar(50)     @unique @map("Username")
-  Password String    @db.VarChar(72)     @map("Password")
-  Email    String    @db.VarChar(100)    @unique @map("Email")
-  Role     Role                          @map("Role")
-  TokenVersion Int   @default(1)         @map("TokenVersion")
+model User {
+  id             String         @id @default(uuid()) @db.Uuid
+  username       String         @unique
+  email          String         @unique
+  passwordHash   String
+  tokenVersion   Int            @default(1)
 
   // Relations
-  Transactions Transactions[]
-  Budgets      Budgets[]
-  Categories   Categories[]
+  transactions   Transaction[]
+  budgets        Budget[]
 
-  @@map("Users")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
-model Transactions {
-  TransactionID  Int       @id @default(autoincrement()) @map("TransactionID")
-  UserID         String    @map("UserID") @db.Uuid
-  Amount         Decimal   @db.Decimal(15, 2)            @map("Amount")
-  Type           TransactionType                         @map("Type")
-  TransactionDate DateTime @default(now())               @map("TransactionDate")
-  Description    String?   @db.Text                      @map("Description")
-  DefaultCategory DefaultCategory?                       @map("DefaultCategory")
-  CategoryID     Int?                                     @map("CategoryID")
+// Category hierarchy is predefined by admin (not user-created)
+model Category {
+  id             Int            @id @default(autoincrement())
+  parentId       Int?
+  name           String
+  parent         Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  subcategories  Category[]     @relation("CategoryHierarchy")
 
-  // Relations
-  Category     Categories?  @relation(fields: [CategoryID], references: [CategoryID])
-  User         Users        @relation(fields: [UserID], references: [UserID])
-
-  @@map("Transactions")
+  transactions   Transaction[]
+  budgets        Budget[]
 }
 
-model Categories {
-  CategoryID   Int       @id @default(autoincrement()) @map("CategoryID")
-  UserID       String?   @map("UserID") @db.Uuid
-  CategoryName String    @db.VarChar(50)               @map("CategoryName")
-  CreatedAt    DateTime  @default(now())               @map("CreatedAt")
+// Transactions belong to a user and one category (optionally)
+model Transaction {
+  id             Int             @id @default(autoincrement())
+  userId         String          @db.Uuid
+  categoryId     Int?
+  type           TransactionType
+  amount         Decimal         @db.Decimal(12, 2)
+  date           DateTime        // date only (can store with time but ignore time client-side)
+  description    String?
 
   // Relations
-  User          Users?         @relation(fields: [UserID], references: [UserID])
-  Transactions  Transactions[]
-  Budgets       Budgets[]
+  user           User            @relation(fields: [userId], references: [id])
+  category       Category?       @relation(fields: [categoryId], references: [id])
 
-  @@map("Categories")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
-model Budgets {
-  BudgetID     Int             @id @default(autoincrement()) @map("BudgetID")
-  UserID       String          @map("UserID") @db.Uuid
-  CategoryID   Int?            @map("CategoryID")
-  Amount       Decimal         @db.Decimal(15, 2)            @map("Amount")
-  PeriodStart  DateTime        @map("PeriodStart")
-  PeriodEnd    DateTime        @map("PeriodEnd")
-  Recurrence   RecurrenceType  @default(monthly)             @map("Recurrence")
-  CreatedAt    DateTime        @default(now())               @map("CreatedAt")
+// Budgets are monthly, optionally linked to a category
+model Budget {
+  id             Int             @id @default(autoincrement())
+  userId         String          @db.Uuid
+  categoryId     Int?
+  month          Int
+  year           Int
+  amount         Decimal         @db.Decimal(12, 2)
 
   // Relations
-  User         Users           @relation(fields: [UserID], references: [UserID])
-  Category     Categories?     @relation(fields: [CategoryID], references: [CategoryID])
+  user           User            @relation(fields: [userId], references: [id])
+  category       Category?       @relation(fields: [categoryId], references: [id])
 
-  @@map("Budgets")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([userId, month, year, categoryId]) // prevent duplicate budgets
 }
