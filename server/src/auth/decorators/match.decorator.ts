@@ -16,11 +16,20 @@ export const Match = (
       constraints: [property],
       options: validationOptions,
       validator: {
-        validate(value: any, args: ValidationArguments) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          const [relatedPropertyName] = args.constraints;
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-          const relatedValue = (args.object as any)[relatedPropertyName];
+        validate(value: unknown, args: ValidationArguments): boolean {
+          const constraints = args.constraints;
+          if (
+            !Array.isArray(constraints) ||
+            constraints.length === 0 ||
+            typeof constraints[0] !== 'string'
+          ) {
+            return false;
+          }
+
+          const relatedPropertyName: string = constraints[0];
+          const validationObject = args.object as Record<string, unknown>;
+          const relatedValue = validationObject[relatedPropertyName];
+
           return value === relatedValue;
         },
       },

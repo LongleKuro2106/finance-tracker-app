@@ -77,14 +77,20 @@ export class AuthService {
         ? { Email: input.usernameOrEmail }
         : { Username: input.usernameOrEmail },
     });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user)
+      throw new UnauthorizedException(
+        'You have entered an invalid username or password',
+      );
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const valid: boolean = (await compare(
       input.password,
       user.Password,
     )) as boolean;
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid)
+      throw new UnauthorizedException(
+        'You have entered an invalid username or password',
+      );
 
     // Rotate token version on each successful login
     const updated: Users = await this.prisma.users.update({
@@ -98,7 +104,22 @@ export class AuthService {
       updated.Role,
       updated.TokenVersion,
     );
-    return { user, access_token: token };
+    return {
+      accessToken: token,
+      username: updated.Username,
+      userId: updated.UserID,
+    };
+  }
+
+  async getMe(userId: string) {
+    const user: Users | null = await this.prisma.users.findUnique({
+      where: { UserID: userId },
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+    return {
+      username: user.Username,
+      userId: user.UserID,
+    };
   }
 
   private signToken(
