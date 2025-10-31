@@ -1,9 +1,18 @@
-import { Body, Controller, Post, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-// import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -22,5 +31,11 @@ export class AuthController {
   })
   login(@Body(ValidationPipe) body: LoginDto) {
     return this.authService.login(body);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getMe(@CurrentUser() user: authenticatedUserInterface.AuthenticatedUser) {
+    return this.authService.getMe(user.userId);
   }
 }
