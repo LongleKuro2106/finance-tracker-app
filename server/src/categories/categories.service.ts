@@ -26,10 +26,7 @@ export class CategoriesService {
 
   async findAll() {
     return this.prisma.category.findMany({
-      orderBy: [
-        { parentId: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ parentId: 'asc' }, { name: 'asc' }],
       include: {
         parent: true,
         subcategories: true,
@@ -55,4 +52,3 @@ export class CategoriesService {
     });
   }
 }
-
