@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { hash, compare } from 'bcrypt';
-import type { Users, Role } from '@prisma/client';
+import type { User } from '@prisma/client';
 
 interface SignupInput {
   username: string;
@@ -23,7 +23,6 @@ interface LoginInput {
 type JwtPayload = {
   sub: string;
   username: string;
-  role: Role;
   tokenVersion: number;
 };
 
@@ -35,11 +34,11 @@ export class AuthService {
   ) {}
 
   async signup(input: SignupInput) {
-    const existing = await this.prisma.users.findFirst({
+    const existing = await this.prisma.user.findFirst({
       where: {
         OR: [
-          { Username: input.username },
-          ...(input.email ? [{ Email: input.email }] : []),
+          { username: input.username },
+          ...(input.email ? [{ email: input.email }] : []),
         ],
       },
     });
@@ -49,21 +48,19 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const passwordHash: string = (await hash(input.password, 10)) as string;
 
-    const created: Users = await this.prisma.users.create({
+    const created: User = await this.prisma.user.create({
       data: {
-        Username: input.username,
-        Email: input.email,
-        Password: passwordHash,
-        Role: 'user', // Always default to 'user' role for new sign ups
-        TokenVersion: 1,
+        username: input.username,
+        email: input.email,
+        passwordHash: passwordHash,
+        tokenVersion: 1,
       },
     });
 
     const token: string = this.signToken(
-      created.UserID,
-      created.Username,
-      created.Role,
-      created.TokenVersion,
+      created.id,
+      created.username,
+      created.tokenVersion,
     );
     return { user: created, access_token: token };
   }
@@ -72,10 +69,10 @@ export class AuthService {
     // Check if input is email or username
     const isEmail = input.usernameOrEmail.includes('@');
 
-    const user: Users | null = await this.prisma.users.findFirst({
+    const user: User | null = await this.prisma.user.findFirst({
       where: isEmail
-        ? { Email: input.usernameOrEmail }
-        : { Username: input.usernameOrEmail },
+        ? { email: input.usernameOrEmail }
+        : { username: input.usernameOrEmail },
     });
     if (!user)
       throw new UnauthorizedException(
@@ -85,7 +82,7 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const valid: boolean = (await compare(
       input.password,
-      user.Password,
+      user.passwordHash,
     )) as boolean;
     if (!valid)
       throw new UnauthorizedException(
@@ -93,43 +90,41 @@ export class AuthService {
       );
 
     // Rotate token version on each successful login
-    const updated: Users = await this.prisma.users.update({
-      where: { UserID: user.UserID },
-      data: { TokenVersion: (user.TokenVersion ?? 1) + 1 },
+    const updated: User = await this.prisma.user.update({
+      where: { id: user.id },
+      data: { tokenVersion: (user.tokenVersion ?? 1) + 1 },
     });
 
     const token: string = this.signToken(
-      updated.UserID,
-      updated.Username,
-      updated.Role,
-      updated.TokenVersion,
+      updated.id,
+      updated.username,
+      updated.tokenVersion,
     );
     return {
       accessToken: token,
-      username: updated.Username,
-      userId: updated.UserID,
+      username: updated.username,
+      userId: updated.id,
     };
   }
 
   async getMe(userId: string) {
-    const user: Users | null = await this.prisma.users.findUnique({
-      where: { UserID: userId },
+    const user: User | null = await this.prisma.user.findUnique({
+      where: { id: userId },
     });
     if (!user) throw new UnauthorizedException('User not found');
     return {
-      username: user.Username,
-      userId: user.UserID,
-      email: user.Email,
+      username: user.username,
+      userId: user.id,
+      email: user.email,
     };
   }
 
   private signToken(
     userId: string,
     username: string,
-    role: Role,
     tokenVersion: number,
   ): string {
-    const payload: JwtPayload = { sub: userId, username, role, tokenVersion };
+    const payload: JwtPayload = { sub: userId, username, tokenVersion };
     return this.jwt.sign(payload);
   }
 }

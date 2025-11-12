@@ -59,11 +59,11 @@ export class TransactionsController {
     @Param('id') id: string,
     @Body(ValidationPipe) body: UpdateTransactionDto,
   ) {
-    return this.service.updateForUser(req.user.userId, Number(id), body);
+    return this.service.updateForUser(req.user.userId, parseInt(id, 10), body);
   }
 
   @Delete(':id')
   remove(@Req() req: { user: { userId: string } }, @Param('id') id: string) {
-    return this.service.deleteForUser(req.user.userId, Number(id));
+    return this.service.deleteForUser(req.user.userId, parseInt(id, 10));
   }
 }

@@ -1,15 +1,13 @@
 import {
   IsDateString,
-  IsInt,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Min,
-  IsPositive,
-  IsIn,
 } from 'class-validator';
-import { DefaultCategory } from '@prisma/client';
+import { TransactionType } from '@prisma/client';
 
 export class CreateTransactionDto {
   @IsNumber()
@@ -18,22 +16,16 @@ export class CreateTransactionDto {
   amount!: number; // Decimal as number; Prisma will coerce
 
   @IsDateString()
-  transactionDate!: string; // ISO string
+  date!: string; // ISO string - date only (time will be normalized to 00:00:00Z)
+
+  @IsEnum(TransactionType)
+  type!: TransactionType;
 
   @IsOptional()
-  @IsIn(Object.values(DefaultCategory))
-  defaultCategory?: DefaultCategory;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  categoryId?: number;
+  @IsString()
+  categoryName?: string; // Category name (e.g., "Groceries", "Restaurants")
 
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsString()
-  @IsNotEmpty()
-  type!: 'expense' | 'income';
 }
