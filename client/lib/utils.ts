@@ -14,10 +14,40 @@ export const getApiBaseUrl = (): string => {
 export type DecodedToken = {
   sub: string
   username: string
-  role: string
   tokenVersion: number
   exp?: number
   iat?: number
+}
+
+export type UserInfo = {
+  username: string
+  userId: string
+  email: string
+}
+
+export type Category = {
+  id: number
+  name: string
+  parentId: number | null
+}
+
+export type Transaction = {
+  id: number
+  userId: string
+  categoryId: number | null
+  type: 'income' | 'expense'
+  amount: number | string // Decimal from Prisma
+  date: string // ISO date string
+  description: string | null
+  category: Category | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type TransactionsResponse = {
+  data: Transaction[]
+  nextCursor: string | null
+  pageSize: number
 }
 
 export const decodeJwt = (token: string): DecodedToken | null => {
