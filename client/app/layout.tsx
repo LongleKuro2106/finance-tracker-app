@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import LoadingOverlay from "@/components/loading-overlay";
+import LoadingOverlay from "@/components/shared/loading-overlay";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
