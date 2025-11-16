@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import SignOutButton from '../../components/signout'
-import TransactionsSection from '../../components/transactions-section'
+import DashboardWrapper from '../../components/dashboard/dashboard-wrapper'
 import { getApiBaseUrl } from '@/lib/utils'
 
 const DashboardPage = async () => {
@@ -44,25 +43,7 @@ const DashboardPage = async () => {
     redirect('/login')
   }
 
-  return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-neutral-600 dark:text-neutral-400 mt-1">
-              Welcome back, {username}
-            </p>
-          </div>
-          <SignOutButton />
-        </div>
-
-        {/* Transactions Section */}
-        <TransactionsSection />
-      </div>
-    </div>
-  )
+  return <DashboardWrapper username={username} />
 }
 
 export default DashboardPage

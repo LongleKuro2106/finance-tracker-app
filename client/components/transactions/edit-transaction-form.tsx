@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import CategorySelector from './category-selector'
 import type { Transaction } from '@/lib/utils'
 
 const transactionSchema = z.object({
@@ -27,64 +28,6 @@ const transactionSchema = z.object({
 })
 
 type TransactionFormValues = z.infer<typeof transactionSchema>
-
-// Categories from seed data - flattened for select dropdown
-const CATEGORIES = [
-  'Food & Drinks',
-  'Groceries',
-  'Restaurants',
-  'Coffee & Snacks',
-  'Alcohol & Tobacco',
-  'Bars',
-  'Food & Drinks Other',
-  'Transport',
-  'Car & Fuel',
-  'Public Transport',
-  'Flights',
-  'Taxi',
-  'Transport Other',
-  'Shopping',
-  'Clothes & Accessories',
-  'Electronics',
-  'Hobby & Sports Equipment',
-  'Books & Games',
-  'Gifts',
-  'Shopping Other',
-  'Leisure',
-  'Culture & Events',
-  'Hobbies',
-  'Sports & Fitness',
-  'Vacation',
-  'Leisure Other',
-  'Health & Beauty',
-  'Healthcare',
-  'Pharmacy',
-  'Eyecare',
-  'Beauty',
-  'Health & Beauty Other',
-  'Home Improvements',
-  'Renovations & Repairs',
-  'Furniture & Interior',
-  'Garden',
-  'Home Improvements Other',
-  'Household & Services',
-  'Rent',
-  'Mortgage & Interest',
-  'Media & IT',
-  'Utilities',
-  'Insurances and Fees',
-  'Services',
-  'Household & Services Other',
-  'Other',
-  'Cash Withdrawals',
-  'Business Expenses',
-  'Kids',
-  'Pets',
-  'Charity',
-  'Education',
-  'Uncategorized',
-  'Saving',
-]
 
 interface EditTransactionFormProps {
   isOpen: boolean
@@ -197,7 +140,7 @@ const EditTransactionForm = ({
       aria-labelledby="edit-transaction-form-title"
     >
       <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md p-6 space-y-4"
+        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -235,114 +178,115 @@ const EditTransactionForm = ({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <FormControl>
-                    <select
-                      {...field}
-                      className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
-                      disabled={isSubmitting}
-                    >
-                      <option value="expense">Expense</option>
-                      <option value="income">Income</option>
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
+                          disabled={isSubmitting}
+                        >
+                          <option value="expense">Expense</option>
+                          <option value="income">Income</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => {
-                        const value = parseFloat(e.target.value) || 0
-                        field.onChange(value)
-                      }}
-                      value={field.value || ''}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          {...field}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || 0
+                            field.onChange(value)
+                          }}
+                          value={field.value || ''}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="categoryName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category (Optional)</FormLabel>
-                  <FormControl>
-                    <select
-                      {...field}
-                      className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
-                      disabled={isSubmitting}
-                    >
-                      <option value="">None</option>
-                      {CATEGORIES.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Right Column */}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="categoryName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category (Optional)</FormLabel>
+                      <FormControl>
+                        <CategorySelector
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      placeholder="Add a description"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="Add a description"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             {error && (
               <div

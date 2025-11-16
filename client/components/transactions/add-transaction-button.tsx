@@ -29,7 +29,11 @@ const AddTransactionButton = ({
 
   return (
     <>
-      <Button onClick={handleOpen} aria-label="Add new transaction">
+      <Button
+        onClick={handleOpen}
+        aria-label="Add new transaction"
+        className="w-full"
+      >
         <svg
           className="w-4 h-4 mr-2"
           fill="none"
