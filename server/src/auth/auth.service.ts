@@ -68,8 +68,9 @@ export class AuthService {
   }
 
   async login(input: LoginInput) {
-    const user: User | null =
-      await this.usersService.findUserByNameOrEmail(input.usernameOrEmail);
+    const user: User | null = await this.usersService.findUserByNameOrEmail(
+      input.usernameOrEmail,
+    );
     if (!user)
       throw new UnauthorizedException(
         'You have entered an invalid username or password',
