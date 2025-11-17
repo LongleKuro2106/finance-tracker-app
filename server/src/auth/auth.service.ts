@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { hash, compare } from 'bcrypt';
 import type { User } from '@prisma/client';
@@ -30,6 +31,7 @@ type JwtPayload = {
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
     private readonly jwt: JwtService,
   ) {}
 
@@ -66,14 +68,9 @@ export class AuthService {
   }
 
   async login(input: LoginInput) {
-    // Check if input is email or username
-    const isEmail = input.usernameOrEmail.includes('@');
-
-    const user: User | null = await this.prisma.user.findFirst({
-      where: isEmail
-        ? { email: input.usernameOrEmail }
-        : { username: input.usernameOrEmail },
-    });
+    const user: User | null = await this.usersService.findUserByNameOrEmail(
+      input.usernameOrEmail,
+    );
     if (!user)
       throw new UnauthorizedException(
         'You have entered an invalid username or password',
