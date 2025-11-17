@@ -40,6 +40,21 @@ export class UsersService {
     return this.prisma.user.findFirst({ where: { username } });
   }
 
+  async findByEmail(email: string) {
+    return this.prisma.user.findFirst({ where: { email } });
+  }
+
+  async findUserByNameOrEmail(usernameOrEmail: string) {
+    // Check if input is email or username
+    const isEmail = usernameOrEmail.includes('@');
+
+    return this.prisma.user.findFirst({
+      where: isEmail
+        ? { email: usernameOrEmail }
+        : { username: usernameOrEmail },
+    });
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
       const updateData: {
