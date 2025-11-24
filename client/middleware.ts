@@ -1,39 +1,71 @@
-import { NextResponse, type NextRequest } from 'next/server'
-
-const atobWeb = (b64: string) => {
-  if (typeof atob !== 'undefined') return atob(b64)
-  return Buffer.from(b64, 'base64').toString('binary')
-}
-
-const isExpired = (jwt: string): boolean => {
-  try {
-    const [, payloadB64] = jwt.split('.')
-    if (!payloadB64) return true
-    const normalized = payloadB64.replace(/-/g, '+').replace(/_/g, '/')
-    const payloadJson = decodeURIComponent(
-      Array.prototype.map
-        .call(atobWeb(normalized), (c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    const payload = JSON.parse(payloadJson) as { exp?: number }
-    if (!payload?.exp) return true
-    return payload.exp * 1000 <= Date.now()
-  } catch {
-    return true
-  }
-}
+import { NextRequest, NextResponse } from 'next/server'
+import { isTokenExpiringSoon } from './lib/auth-utils'
 
 export const config = {
-  matcher: ['/dashboard'],
+  matcher: [
+    '/dashboard/:path*',
+    '/budgets/:path*',
+    '/transactions/:path*',
+    '/',
+  ],
 }
 
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get('access_token')?.value
-  if (!token || isExpired(token)) {
-    const url = new URL('/login', request.url)
-    return NextResponse.redirect(url)
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next()
+
+  // Check authentication for protected routes
+  const pathname = request.nextUrl.pathname
+  const isProtectedRoute = pathname.startsWith('/dashboard') ||
+                          pathname.startsWith('/budgets') ||
+                          pathname.startsWith('/transactions')
+
+  if (isProtectedRoute) {
+    const accessToken = request.cookies.get('access_token')?.value
+    const refreshToken = request.cookies.get('refresh_token')?.value
+
+    // If no tokens, redirect to login
+    if (!accessToken || !refreshToken) {
+      const url = new URL('/login', request.url)
+      return NextResponse.redirect(url)
+    }
+
+    // If access token is expiring soon or expired, try to refresh
+    if (isTokenExpiringSoon(accessToken, 5 * 60)) {
+      // Try to refresh the token
+      try {
+        const refreshUrl = new URL('/api/auth/refresh', request.url)
+        const refreshResponse = await fetch(refreshUrl, {
+          method: 'POST',
+          headers: {
+            Cookie: request.headers.get('cookie') || '',
+          },
+        })
+
+        if (!refreshResponse.ok) {
+          // Refresh failed, redirect to login
+          const url = new URL('/login', request.url)
+          const redirectResponse = NextResponse.redirect(url)
+          // Clear cookies
+          redirectResponse.cookies.delete('access_token')
+          redirectResponse.cookies.delete('refresh_token')
+          return redirectResponse
+        }
+
+        // Get new cookies from refresh response
+        const setCookieHeaders = refreshResponse.headers.getSetCookie()
+        setCookieHeaders.forEach((cookie) => {
+          response.headers.append('Set-Cookie', cookie)
+        })
+      } catch {
+        // Refresh failed, redirect to login
+        const url = new URL('/login', request.url)
+        const redirectResponse = NextResponse.redirect(url)
+        redirectResponse.cookies.delete('access_token')
+        redirectResponse.cookies.delete('refresh_token')
+        return redirectResponse
+      }
+    }
   }
-  return NextResponse.next()
+
+  return response
 }
-
-

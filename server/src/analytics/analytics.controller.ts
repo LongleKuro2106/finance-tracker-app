@@ -1,4 +1,5 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import {
   AnalyticsService,
@@ -7,7 +8,8 @@ import {
   CategoryData,
 } from './analytics.service';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@Throttle({ default: { limit: 50, ttl: 60_000 } }) // 50 requests per minute (analytics are expensive)
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

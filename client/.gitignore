@@ -22,7 +22,26 @@
 
 # misc
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Secrets and keys
 *.pem
+*.key
+*.secret
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets/
+*.env.backup
+*.env.bak
+
+# Backup files
+*.bak
+*.backup
 
 # debug
 npm-debug.log*
@@ -31,7 +50,20 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.staging.local
+!.env.example
+!.env.template
+!.env.sample
 
 # vercel
 .vercel
@@ -39,3 +71,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Security documentation (not pushed to git)
+SECURITY_NOTES.md

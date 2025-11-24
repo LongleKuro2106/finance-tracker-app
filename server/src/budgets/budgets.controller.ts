@@ -11,13 +11,15 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@Throttle({ default: { limit: 100, ttl: 60_000 } }) // 100 requests per minute per user
 @Controller('budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
@@ -101,6 +103,19 @@ export class BudgetsController {
       Number(month),
       Number(year),
       dto,
+    );
+  }
+
+  @Patch(':month/:year/toggle-preserve')
+  togglePreserve(
+    @Req() req: { user: { userId: string } },
+    @Param('month') month: string,
+    @Param('year') year: string,
+  ) {
+    return this.budgetsService.togglePreserve(
+      req.user.userId,
+      Number(month),
+      Number(year),
     );
   }
 }

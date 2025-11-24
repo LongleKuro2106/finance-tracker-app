@@ -373,6 +373,50 @@ export class BudgetsService {
   }
 
   /**
+   * Toggle preserve to next month setting for a budget
+   */
+  async togglePreserve(
+    userId: string,
+    month: number,
+    year: number,
+  ) {
+    const budget = await this.prisma.budget.findUnique({
+      where: {
+        userId_month_year: {
+          userId,
+          month,
+          year,
+        },
+      },
+    });
+
+    if (!budget) {
+      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+    }
+
+    const updated = await this.prisma.budget.update({
+      where: {
+        userId_month_year: {
+          userId,
+          month,
+          year,
+        },
+      },
+      data: {
+        preserveToNextMonth: !budget.preserveToNextMonth,
+      },
+    });
+
+    const status = await this.checkBudgetStatus(userId, month, year);
+
+    return {
+      ...updated,
+      amount: updated.amount.toNumber(),
+      status,
+    };
+  }
+
+  /**
    * Clean up old budgets (delete budgets for past months)
    * This can be called periodically via a cron job
    */

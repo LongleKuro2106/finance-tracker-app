@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import CategorySelector from './category-selector'
+import { apiPatch } from '@/lib/api-client'
 import type { Transaction } from '@/lib/utils'
 
 const transactionSchema = z.object({
@@ -84,24 +85,13 @@ const EditTransactionForm = ({
     setError(null)
 
     try {
-      const res = await fetch(`/api/transactions/${transaction.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: values.amount,
-          date: values.date,
-          type: values.type,
-          categoryName: values.categoryName || undefined,
-          description: values.description || undefined,
-        }),
+      await apiPatch(`/api/transactions/${transaction.id}`, {
+        amount: values.amount,
+        date: values.date,
+        type: values.type,
+        categoryName: values.categoryName || undefined,
+        description: values.description || undefined,
       })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.message ?? 'Failed to update transaction')
-      }
 
       // Reset form and close modal
       form.reset()

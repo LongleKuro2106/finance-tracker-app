@@ -11,12 +11,14 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
+@Throttle({ default: { limit: 100, ttl: 60_000 } }) // 100 requests per minute per user
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
@@ -59,11 +61,11 @@ export class TransactionsController {
     @Param('id') id: string,
     @Body(ValidationPipe) body: UpdateTransactionDto,
   ) {
-    return this.service.updateForUser(req.user.userId, parseInt(id, 10), body);
+    return this.service.updateForUser(req.user.userId, id, body);
   }
 
   @Delete(':id')
   remove(@Req() req: { user: { userId: string } }, @Param('id') id: string) {
-    return this.service.deleteForUser(req.user.userId, parseInt(id, 10));
+    return this.service.deleteForUser(req.user.userId, id);
   }
 }
