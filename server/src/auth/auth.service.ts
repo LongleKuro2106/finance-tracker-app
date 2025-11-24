@@ -341,6 +341,60 @@ export class AuthService {
     };
   }
 
+  async updateProfile(
+    userId: string,
+    updateData: { password?: string; email?: string },
+  ) {
+    const updatePayload: {
+      email?: string;
+      passwordHash?: string;
+    } = {};
+
+    if (updateData.email !== undefined) {
+      // Check if email is already taken by another user
+      const existingUser = await this.usersService.findByEmail(
+        updateData.email,
+      );
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException('Email already in use');
+      }
+      updatePayload.email = updateData.email;
+    }
+
+    if (updateData.password !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      updatePayload.passwordHash = (await hash(
+        updateData.password,
+        10,
+      )) as string;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: updatePayload,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return user;
+  }
+
+  async deleteOwnAccount(userId: string) {
+    // Delete user and cascade will handle related records
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+  }
+
   private signToken(
     userId: string,
     username: string,

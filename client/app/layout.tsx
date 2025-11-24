@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - CSS import for side effects
 import "./globals.css";
 import LoadingOverlay from "@/components/shared/loading-overlay";
 

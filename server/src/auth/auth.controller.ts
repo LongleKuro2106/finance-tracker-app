@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Patch,
   Post,
   UseGuards,
   ValidationPipe,
@@ -12,6 +14,7 @@ import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
@@ -73,5 +76,22 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   getMe(@CurrentUser() user: authenticatedUserInterface.AuthenticatedUser) {
     return this.authService.getMe(user.userId);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateProfile(
+    @CurrentUser() user: authenticatedUserInterface.AuthenticatedUser,
+    @Body(ValidationPipe) updateProfileDto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(user.userId, updateProfileDto);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  deleteOwnAccount(
+    @CurrentUser() user: authenticatedUserInterface.AuthenticatedUser,
+  ) {
+    return this.authService.deleteOwnAccount(user.userId);
   }
 }

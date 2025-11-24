@@ -1,43 +1,24 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  UseGuards,
-  ValidationPipe,
-} from '@nestjs/common';
-import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+/**
+ * UsersController - RESTRICTED ENDPOINTS
+ *
+ * ⚠️ SECURITY NOTE: These endpoints are kept for internal/admin use only.
+ * Regular users should use /auth/me endpoints instead:
+ * - GET /auth/me - Get own profile
+ * - PATCH /auth/me - Update own profile (password, email only)
+ * - DELETE /auth/me - Delete own account
+ *
+ * The /users endpoints below are intentionally left empty/restricted
+ * to prevent users from accessing other users' data.
+ */
+import { Controller } from '@nestjs/common';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body(ValidationPipe)
-    updateUserDto: UpdateUserDto,
-  ) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.usersService.delete(id);
-  }
+  // All endpoints removed for security:
+  // - GET /users - Removed (users shouldn't see all users)
+  // - GET /users/:id - Removed (users shouldn't see other users)
+  // - PATCH /users/:id - Removed (users should only update themselves via /auth/me)
+  // - DELETE /users/:id - Removed (users should only delete themselves via /auth/me)
+  //
+  // If admin functionality is needed in the future, add role-based guards here.
 }

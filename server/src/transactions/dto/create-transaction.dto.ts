@@ -29,6 +29,11 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value ? DOMPurify.sanitize(value) : value))
+  @Transform(({ value }) => {
+    if (typeof value === 'string' && value) {
+      return DOMPurify.sanitize(value);
+    }
+    return undefined;
+  })
   description?: string;
 }
