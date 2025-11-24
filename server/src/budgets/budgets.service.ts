@@ -375,11 +375,7 @@ export class BudgetsService {
   /**
    * Toggle preserve to next month setting for a budget
    */
-  async togglePreserve(
-    userId: string,
-    month: number,
-    year: number,
-  ) {
+  async togglePreserve(userId: string, month: number, year: number) {
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {

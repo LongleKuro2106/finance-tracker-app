@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
 import { getAccessToken, getRefreshToken, clearAuthCookies } from '@/lib/auth-helpers'
-import { cookies } from 'next/headers'
 
-export const POST = async (request: NextRequest) => {
+export const POST = async () => {
   const accessToken = await getAccessToken()
   const refreshToken = await getRefreshToken()
 

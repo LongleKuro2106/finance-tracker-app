@@ -1,0 +1,54 @@
+# Force LF for all text files
+* text=auto eol=lf
+
+# Treat these as binary so Git does not touch them
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Keep shell scripts executable + LF
+*.sh text eol=lf
+
+# Prisma
+*.prisma text eol=lf
+
+# SQL (migrations)
+*.sql text eol=lf
+
+# Dockerfiles
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+docker-compose.yml text eol=lf
+docker-compose.yaml text eol=lf
+
+# Config files
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+
+# Code files
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# Package files
+package.json text eol=lf
+package-lock.json text eol=lf
+pnpm-lock.yaml text eol=lf
+yarn.lock text eol=lf
+
