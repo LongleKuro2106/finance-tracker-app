@@ -35,23 +35,39 @@ export const POST = async (request: Request) => {
       )
     }
 
-    // Backend returns accessToken (camelCase) not access_token
-    const token: string | undefined =
+    // Backend returns accessToken and refreshToken (camelCase)
+    const accessToken: string | undefined =
       data && typeof data === 'object' && 'accessToken' in data
         ? String(data.accessToken)
         : undefined
 
-    if (!token) {
-      return NextResponse.json({ message: 'Missing token' }, { status: 500 })
+    const refreshToken: string | undefined =
+      data && typeof data === 'object' && 'refreshToken' in data
+        ? String(data.refreshToken)
+        : undefined
+
+    if (!accessToken || !refreshToken) {
+      return NextResponse.json({ message: 'Missing tokens' }, { status: 500 })
     }
 
     const cookieStore = await cookies()
-    cookieStore.set('access_token', token, {
+
+    // Store access token (1 hour expiry)
+    cookieStore.set('access_token', accessToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 60 * 60, // 1 hour
+    })
+
+    // Store refresh token (7 days expiry)
+    cookieStore.set('refresh_token', refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     })
 
     return NextResponse.json({ ok: true })

@@ -32,7 +32,7 @@ export type Category = {
 }
 
 export type Transaction = {
-  id: number
+  id: string // UUID
   userId: string
   categoryId: number | null
   type: 'income' | 'expense'

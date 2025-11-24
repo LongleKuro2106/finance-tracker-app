@@ -1,15 +1,32 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getApiBaseUrl } from '@/lib/utils'
+import { getAccessToken, getRefreshToken, clearAuthCookies } from '@/lib/auth-helpers'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
 
-export const POST = async () => {
-  const cookieStore = await cookies()
-  cookieStore.set('access_token', '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 0,
-  })
+export const POST = async (request: NextRequest) => {
+  const accessToken = await getAccessToken()
+  const refreshToken = await getRefreshToken()
+
+  // Call backend logout endpoint to revoke refresh tokens
+  if (accessToken && refreshToken) {
+    try {
+      const apiBase = getApiBaseUrl()
+      await fetch(`${apiBase}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      })
+    } catch {
+      // Continue with logout even if backend call fails
+    }
+  }
+
+  // Clear both cookies
+  await clearAuthCookies()
+
   return NextResponse.json({ ok: true })
 }
 

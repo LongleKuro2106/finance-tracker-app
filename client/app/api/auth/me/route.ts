@@ -1,11 +1,10 @@
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getApiBaseUrl, type UserInfo } from '@/lib/utils'
+import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const GET = async () => {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('access_token')?.value
+    const token = await getAccessToken()
 
     if (!token) {
       return NextResponse.json(
@@ -34,15 +33,9 @@ export const GET = async () => {
     }
 
     if (!res.ok) {
-      // If unauthorized, clear the invalid token
+      // If unauthorized, clear both tokens
       if (res.status === 401) {
-        cookieStore.set('access_token', '', {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 0,
-        })
+        await clearAuthCookies()
       }
 
       return NextResponse.json(

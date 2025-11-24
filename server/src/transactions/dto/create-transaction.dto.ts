@@ -7,7 +7,9 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { TransactionType } from '@prisma/client';
+import DOMPurify from 'isomorphic-dompurify';
 
 export class CreateTransactionDto {
   @IsNumber()
@@ -27,5 +29,6 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (value ? DOMPurify.sanitize(value) : value))
   description?: string;
 }

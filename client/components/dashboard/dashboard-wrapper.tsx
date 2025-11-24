@@ -31,10 +31,10 @@ const DashboardWrapper = ({ username }: DashboardWrapperProps) => {
             </div>
 
             {/* Analytics Section */}
-            <AnalyticsPlaceholder />
+            <AnalyticsPlaceholder refreshKey={refreshKey} />
 
             {/* Transactions Section */}
-            <TransactionsSection refreshKey={refreshKey} />
+            <TransactionsSection refreshKey={refreshKey} onRefresh={handleRefresh} />
           </div>
         </div>
       </main>

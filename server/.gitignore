@@ -14,6 +14,10 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
 # Tests
 /coverage
@@ -35,12 +39,21 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# dotenv environment variable files (all variants)
 .env
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 .env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.staging.local
+!.env.example
+!.env.template
+!.env.sample
 
 # temp directory
 .temp
@@ -55,4 +68,28 @@ pids
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# Prisma
 /generated/prisma
+prisma/migrations/*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets and keys
+*.pem
+*.key
+*.secret
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets/
+*.env.backup
+*.env.bak
+
+# Backup files
+*.bak
+*.backup
+
+# Security documentation (not pushed to git)
+SECURITY_CHECKLIST.md

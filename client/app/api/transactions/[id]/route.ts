@@ -1,14 +1,13 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
+import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const PATCH = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('access_token')?.value
+    const token = await getAccessToken()
 
     if (!token) {
       return NextResponse.json(
@@ -16,6 +15,7 @@ export const PATCH = async (
         { status: 401 },
       )
     }
+
 
     const { id } = await params
 
@@ -52,13 +52,7 @@ export const PATCH = async (
 
     if (!res.ok) {
       if (res.status === 401) {
-        cookieStore.set('access_token', '', {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 0,
-        })
+        await clearAuthCookies()
       }
 
       return NextResponse.json(
@@ -86,8 +80,7 @@ export const DELETE = async (
   { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('access_token')?.value
+    const token = await getAccessToken()
 
     if (!token) {
       return NextResponse.json(
@@ -95,6 +88,7 @@ export const DELETE = async (
         { status: 401 },
       )
     }
+
 
     const { id } = await params
 
@@ -124,13 +118,7 @@ export const DELETE = async (
 
     if (!res.ok) {
       if (res.status === 401) {
-        cookieStore.set('access_token', '', {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 0,
-        })
+        await clearAuthCookies()
       }
 
       return NextResponse.json(

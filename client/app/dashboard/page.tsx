@@ -5,9 +5,10 @@ import { getApiBaseUrl } from '@/lib/utils'
 
 const DashboardPage = async () => {
   const cookieStore = await cookies()
-  const token = cookieStore.get('access_token')?.value
+  const accessToken = cookieStore.get('access_token')?.value
 
-  if (!token) {
+  // If no access token, redirect to login (middleware should have caught this, but double-check)
+  if (!accessToken) {
     redirect('/login')
   }
 
@@ -16,23 +17,14 @@ const DashboardPage = async () => {
   const res = await fetch(`${apiBase}/auth/me`, {
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     cache: 'no-store', // Always fetch fresh data
   })
 
+  // If unauthorized, redirect to login (middleware will handle cookie clearing)
   if (!res.ok) {
-    // If unauthorized, clear the invalid token
-    if (res.status === 401) {
-      cookieStore.set('access_token', '', {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        path: '/',
-        maxAge: 0,
-      })
-    }
     redirect('/login')
   }
 

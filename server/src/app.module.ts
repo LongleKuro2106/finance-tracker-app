@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BudgetsModule } from './budgets/budgets.module';
+import { AccountLockoutService } from './common/services/account-lockout.service';
+import { AuditLoggerService } from './common/services/audit-logger.service';
 
 @Module({
   imports: [
@@ -15,5 +17,7 @@ import { BudgetsModule } from './budgets/budgets.module';
     BudgetsModule,
   ],
   controllers: [AppController],
+  providers: [AccountLockoutService, AuditLoggerService],
+  exports: [AccountLockoutService, AuditLoggerService],
 })
 export class AppModule {}

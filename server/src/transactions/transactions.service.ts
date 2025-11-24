@@ -24,7 +24,7 @@ export class TransactionsService {
       userId: userId,
     };
 
-    const cursor = opts?.cursor ? { id: Number(opts.cursor) } : undefined;
+    const cursor = opts?.cursor ? { id: opts.cursor } : undefined;
 
     const items = await this.prisma.transaction.findMany({
       where,
@@ -79,7 +79,7 @@ export class TransactionsService {
     return created;
   }
 
-  async updateForUser(userId: string, id: number, dto: UpdateTransactionDto) {
+  async updateForUser(userId: string, id: string, dto: UpdateTransactionDto) {
     try {
       // First verify the transaction exists and belongs to the user
       const existing = await this.prisma.transaction.findFirst({
@@ -144,7 +144,7 @@ export class TransactionsService {
     }
   }
 
-  async deleteForUser(userId: string, id: number) {
+  async deleteForUser(userId: string, id: string) {
     try {
       // First verify the transaction exists and belongs to the user
       const existing = await this.prisma.transaction.findFirst({

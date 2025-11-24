@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import CategorySelector from './category-selector'
+import { apiPost } from '@/lib/api-client'
 
 const transactionSchema = z.object({
   amount: z.number().min(0, 'Amount must be greater than or equal to 0'),
@@ -29,15 +30,17 @@ const transactionSchema = z.object({
 type TransactionFormValues = z.infer<typeof transactionSchema>
 
 interface AddTransactionFormProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen?: boolean
+  onClose?: () => void
   onSuccess: () => void
+  asPage?: boolean
 }
 
 const AddTransactionForm = ({
-  isOpen,
+  isOpen = true,
   onClose,
   onSuccess,
+  asPage = false,
 }: AddTransactionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -58,29 +61,24 @@ const AddTransactionForm = ({
     setError(null)
 
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: values.amount,
-          date: values.date,
-          type: values.type,
-          categoryName: values.categoryName || undefined,
-          description: values.description || undefined,
-        }),
+      await apiPost('/api/transactions', {
+        amount: values.amount,
+        date: values.date,
+        type: values.type,
+        categoryName: values.categoryName || undefined,
+        description: values.description || undefined,
       })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.message ?? 'Failed to create transaction')
-      }
-
-      // Reset form and close modal
+      // Reset form and handle success
       form.reset()
       onSuccess()
-      onClose()
+      if (asPage) {
+        // If it's a page, onSuccess will handle navigation
+        return
+      }
+      if (onClose) {
+        onClose()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create transaction')
     } finally {
@@ -89,7 +87,7 @@ const AddTransactionForm = ({
   }
 
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!isSubmitting && onClose) {
       form.reset()
       setError(null)
       onClose()
@@ -97,55 +95,57 @@ const AddTransactionForm = ({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && !isSubmitting) {
+    if (e.key === 'Escape' && !isSubmitting && !asPage && onClose) {
       handleClose()
     }
   }
 
   if (!isOpen) return null
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleClose}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="transaction-form-title"
-    >
-      <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
+  const formContent = (
+    <>
+      {!asPage && (
+        <div className="flex items-center justify-between mb-4">
           <h2
             id="transaction-form-title"
             className="text-xl font-semibold"
           >
             Add Transaction
           </h2>
-          <button
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Close dialog"
-            tabIndex={0}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {onClose && (
+            <button
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Close dialog"
+              tabIndex={0}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
         </div>
+      )}
+
+      {asPage && (
+        <h2
+          id="transaction-form-title"
+          className="text-xl font-semibold mb-4"
+        >
+          Add Transaction
+        </h2>
+      )}
 
         <Form {...form}>
           <form
@@ -290,6 +290,27 @@ const AddTransactionForm = ({
             </div>
           </form>
         </Form>
+    </>
+  )
+
+  if (asPage) {
+    return formContent
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleClose}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transaction-form-title"
+    >
+      <div
+        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {formContent}
       </div>
     </div>
   )

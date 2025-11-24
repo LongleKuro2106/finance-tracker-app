@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import type { Transaction, TransactionsResponse } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { formatCategoryDisplayParts } from '@/lib/category-utils'
 import EditTransactionForm from './edit-transaction-form'
 import DeleteConfirmationDialog from './delete-confirmation-dialog'
+import { apiDelete, apiGet } from '@/lib/api-client'
 
 interface TransactionListProps {
   refreshKey?: number
@@ -21,23 +23,12 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const fetchTransactions = async (cursor?: string) => {
-    try {
-      const queryParams = new URLSearchParams()
-      if (cursor) queryParams.set('cursor', cursor)
-      queryParams.set('limit', '20')
+  const fetchTransactions = async (cursor?: string): Promise<TransactionsResponse> => {
+    const queryParams = new URLSearchParams()
+    if (cursor) queryParams.set('cursor', cursor)
+    queryParams.set('limit', '20')
 
-      const res = await fetch(`/api/transactions?${queryParams.toString()}`)
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.message ?? 'Failed to fetch transactions')
-      }
-
-      const data: TransactionsResponse = await res.json()
-      return data
-    } catch (err) {
-      throw err instanceof Error ? err : new Error('Unknown error')
-    }
+    return apiGet<TransactionsResponse>(`/api/transactions?${queryParams.toString()}`)
   }
 
   useEffect(() => {
@@ -103,14 +94,7 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
 
     setIsDeleting(true)
     try {
-      const res = await fetch(`/api/transactions/${deletingTransaction.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.message ?? 'Failed to delete transaction')
-      }
+      await apiDelete(`/api/transactions/${deletingTransaction.id}`)
 
       setDeletingTransaction(null)
       if (onRefresh) {
@@ -177,11 +161,22 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
                 >
                   {transaction.type === 'income' ? 'Income' : 'Expense'}
                 </div>
-                {transaction.category && (
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                    {transaction.category.name}
-                  </span>
-                )}
+                {transaction.category && (() => {
+                  const categoryParts = formatCategoryDisplayParts(transaction.category.name)
+                  if (!categoryParts) return null
+                  return (
+                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                      {categoryParts.child ? (
+                        <>
+                          <span className="font-semibold">{categoryParts.parent}</span>
+                          <span>: {categoryParts.child}</span>
+                        </>
+                      ) : (
+                        <span className="font-semibold">{categoryParts.parent}</span>
+                      )}
+                    </span>
+                  )
+                })()}
               </div>
               {transaction.description && (
                 <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-1">

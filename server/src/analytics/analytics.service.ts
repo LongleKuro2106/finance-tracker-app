@@ -19,6 +19,7 @@ export interface MonthlyData {
   date: string; // ISO date string (YYYY-MM format) for easier frontend use
   income: number;
   expense: number;
+  savings: number; // income - expense
 }
 
 export interface CategoryData {
@@ -219,11 +220,12 @@ export class AnalyticsService {
       }
     });
 
-    // Convert to array, add date string, and sort by date
+    // Convert to array, add date string, calculate savings, and sort by date
     const monthlyData: MonthlyData[] = Array.from(monthlyMap.values())
       .map((data) => ({
         ...data,
         date: `${data.year}-${String(data.month).padStart(2, '0')}`, // YYYY-MM format
+        savings: data.income - data.expense,
       }))
       .sort((a, b) => {
         if (a.year !== b.year) return a.year - b.year;

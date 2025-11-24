@@ -1,100 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { PARENT_CATEGORIES, CATEGORY_HIERARCHY } from '@/lib/category-utils'
 
-// Category structure matching seed data
-const CATEGORIES = [
-  {
-    name: 'Food & Drinks',
-    children: [
-      'Groceries',
-      'Restaurants',
-      'Coffee & Snacks',
-      'Alcohol & Tobacco',
-      'Bars',
-      'Food & Drinks Other',
-    ],
-  },
-  {
-    name: 'Transport',
-    children: [
-      'Car & Fuel',
-      'Public Transport',
-      'Flights',
-      'Taxi',
-      'Transport Other',
-    ],
-  },
-  {
-    name: 'Shopping',
-    children: [
-      'Clothes & Accessories',
-      'Electronics',
-      'Hobby & Sports Equipment',
-      'Books & Games',
-      'Gifts',
-      'Shopping Other',
-    ],
-  },
-  {
-    name: 'Leisure',
-    children: [
-      'Culture & Events',
-      'Hobbies',
-      'Sports & Fitness',
-      'Vacation',
-      'Leisure Other',
-    ],
-  },
-  {
-    name: 'Health & Beauty',
-    children: [
-      'Healthcare',
-      'Pharmacy',
-      'Eyecare',
-      'Beauty',
-      'Health & Beauty Other',
-    ],
-  },
-  {
-    name: 'Home Improvements',
-    children: [
-      'Renovations & Repairs',
-      'Furniture & Interior',
-      'Garden',
-      'Home Improvements Other',
-    ],
-  },
-  {
-    name: 'Household & Services',
-    children: [
-      'Rent',
-      'Mortgage & Interest',
-      'Media & IT',
-      'Utilities',
-      'Insurances and Fees',
-      'Services',
-      'Household & Services Other',
-    ],
-  },
-  {
-    name: 'Other',
-    children: [
-      'Cash Withdrawals',
-      'Business Expenses',
-      'Kids',
-      'Pets',
-      'Charity',
-      'Education',
-      'Uncategorized',
-      'Other',
-    ],
-  },
-  {
-    name: 'Saving',
-    children: [],
-  },
-]
+// Convert category hierarchy to the format needed for the selector
+const CATEGORIES = PARENT_CATEGORIES.map((parentName) => ({
+  name: parentName,
+  children: CATEGORY_HIERARCHY[parentName] || [],
+}))
 
 interface CategorySelectorProps {
   value: string
@@ -202,7 +115,6 @@ const CategorySelector = ({
     }
   }, [])
 
-  const selectedCategory = CATEGORIES.find((cat) => cat.name === value)
   const hoveredCategoryData = CATEGORIES.find(
     (cat) => cat.name === hoveredCategory,
   )

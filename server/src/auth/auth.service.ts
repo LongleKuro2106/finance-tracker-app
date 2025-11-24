@@ -2,12 +2,20 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { hash, compare } from 'bcrypt';
 import type { User } from '@prisma/client';
+import { AccountLockoutService } from '../common/services/account-lockout.service';
+import {
+  AuditLoggerService,
+  AuditEventType,
+} from '../common/services/audit-logger.service';
+import { RefreshTokenService } from '../common/services/refresh-token.service';
 
 interface SignupInput {
   username: string;
@@ -29,13 +37,18 @@ type JwtPayload = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly jwt: JwtService,
+    private readonly accountLockoutService: AccountLockoutService,
+    private readonly auditLogger: AuditLoggerService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
-  async signup(input: SignupInput) {
+  async signup(input: SignupInput, ipAddress?: string, userAgent?: string) {
     const existing = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -59,32 +72,127 @@ export class AuthService {
       },
     });
 
-    const token: string = this.signToken(
+    const accessToken: string = this.signToken(
       created.id,
       created.username,
       created.tokenVersion,
     );
-    return { user: created, access_token: token };
+
+    const refreshToken: string =
+      await this.refreshTokenService.generateRefreshToken(
+        created.id,
+        created.username,
+        created.tokenVersion,
+      );
+
+    // Log successful signup
+    this.auditLogger.log({
+      eventType: AuditEventType.SIGNUP,
+      userId: created.id,
+      username: created.username,
+      ipAddress,
+      userAgent,
+      timestamp: new Date(),
+    });
+
+    return {
+      user: created,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
   }
 
-  async login(input: LoginInput) {
+  async login(
+    input: LoginInput,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    username: string;
+    userId: string;
+  }> {
     const user: User | null = await this.usersService.findUserByNameOrEmail(
       input.usernameOrEmail,
     );
-    if (!user)
+
+    // Check if account is locked (even if user doesn't exist, to prevent enumeration)
+    const isLocked = await this.accountLockoutService.isLocked(
+      input.usernameOrEmail,
+      user?.id,
+    );
+
+    if (isLocked) {
+      this.auditLogger.logLoginFailure(
+        input.usernameOrEmail,
+        'Account locked due to too many failed attempts',
+        ipAddress,
+        userAgent,
+      );
+      throw new ThrottlerException(
+        'Account temporarily locked due to too many failed login attempts. Please try again in 15 minutes.',
+      );
+    }
+
+    if (!user) {
+      // Record failed attempt even if user doesn't exist (to prevent enumeration)
+      await this.accountLockoutService.recordFailedAttempt(
+        input.usernameOrEmail,
+      );
+      this.auditLogger.logLoginFailure(
+        input.usernameOrEmail,
+        'Invalid username or email',
+        ipAddress,
+        userAgent,
+      );
       throw new UnauthorizedException(
         'You have entered an invalid username or password',
       );
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const valid: boolean = (await compare(
       input.password,
       user.passwordHash,
     )) as boolean;
-    if (!valid)
-      throw new UnauthorizedException(
-        'You have entered an invalid username or password',
+
+    if (!valid) {
+      const lockoutResult =
+        await this.accountLockoutService.recordFailedAttempt(
+          input.usernameOrEmail,
+          user.id,
+        );
+
+      this.auditLogger.logLoginFailure(
+        input.usernameOrEmail,
+        'Invalid password',
+        ipAddress,
+        userAgent,
       );
+
+      // Check if account just got locked
+      if (lockoutResult.isLocked) {
+        this.auditLogger.logAccountLocked(
+          user.id,
+          user.username,
+          ipAddress,
+          userAgent,
+        );
+        throw new ThrottlerException(
+          'Account temporarily locked due to too many failed login attempts. Please try again in 15 minutes.',
+        );
+      }
+
+      throw new UnauthorizedException(
+        `You have entered an invalid username or password. ${lockoutResult.remainingAttempts} attempt(s) remaining.`,
+      );
+    }
+
+    // Clear failed attempts on successful login
+    await this.accountLockoutService.clearFailedAttempts(
+      input.usernameOrEmail,
+      user.id,
+    );
 
     // Rotate token version on each successful login
     const updated: User = await this.prisma.user.update({
@@ -92,16 +200,133 @@ export class AuthService {
       data: { tokenVersion: (user.tokenVersion ?? 1) + 1 },
     });
 
-    const token: string = this.signToken(
+    const accessToken: string = this.signToken(
       updated.id,
       updated.username,
       updated.tokenVersion,
     );
+
+    const refreshToken: string =
+      await this.refreshTokenService.generateRefreshToken(
+        updated.id,
+        updated.username,
+        updated.tokenVersion,
+      );
+
+    // Log successful login
+    this.auditLogger.logLoginSuccess(
+      updated.id,
+      updated.username,
+      ipAddress,
+      userAgent,
+    );
+
     return {
-      accessToken: token,
+      accessToken,
+      refreshToken,
       username: updated.username,
       userId: updated.id,
     };
+  }
+
+  async refreshTokens(
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const tokenData =
+      await this.refreshTokenService.validateRefreshToken(refreshToken);
+
+    if (!tokenData) {
+      this.auditLogger.logSuspiciousActivity(
+        'INVALID_REFRESH_TOKEN',
+        { ipAddress, userAgent },
+        ipAddress,
+        userAgent,
+      );
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Get current user to check token version
+    const user = await this.prisma.user.findUnique({
+      where: { id: tokenData.userId },
+    });
+
+    if (!user || (user.tokenVersion ?? 1) !== tokenData.tokenVersion) {
+      throw new UnauthorizedException('Token version mismatch');
+    }
+
+    // Extract token ID from refresh token for rotation
+    // Token is already validated above, so we can safely decode
+    const decoded: unknown = this.jwt.decode(refreshToken);
+    let tokenId: string | undefined;
+
+    if (
+      decoded &&
+      typeof decoded === 'object' &&
+      decoded !== null &&
+      'tokenId' in decoded
+    ) {
+      const payload = decoded as Record<string, unknown>;
+      if (typeof payload.tokenId === 'string') {
+        tokenId = payload.tokenId;
+      }
+    }
+
+    // Rotate refresh token (revoke old, issue new)
+    const newRefreshToken = tokenId
+      ? await this.refreshTokenService.rotateRefreshToken(
+          tokenId,
+          user.id,
+          user.username,
+          user.tokenVersion ?? 1,
+        )
+      : await this.refreshTokenService.generateRefreshToken(
+          user.id,
+          user.username,
+          user.tokenVersion ?? 1,
+        );
+
+    // Generate new access token
+    const newAccessToken = this.signToken(
+      user.id,
+      user.username,
+      user.tokenVersion ?? 1,
+    );
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  async logout(
+    userId: string,
+    refreshToken?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
+    // Revoke all refresh tokens for this user
+    await this.refreshTokenService.revokeAllUserTokens(userId);
+
+    // Increment token version to invalidate all existing tokens
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+
+    // Log logout
+    this.auditLogger.log({
+      eventType: AuditEventType.TOKEN_REVOKED,
+      userId,
+      ipAddress,
+      userAgent,
+      details: { reason: 'logout' },
+      timestamp: new Date(),
+    });
   }
 
   async getMe(userId: string) {

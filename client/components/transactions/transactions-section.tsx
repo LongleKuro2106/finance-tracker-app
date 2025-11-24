@@ -5,9 +5,13 @@ import TransactionList from './transaction-list'
 
 interface TransactionsSectionProps {
   refreshKey?: number
+  onRefresh?: () => void
 }
 
-const TransactionsSection = ({ refreshKey: externalRefreshKey }: TransactionsSectionProps) => {
+const TransactionsSection = ({
+  refreshKey: externalRefreshKey,
+  onRefresh: externalOnRefresh,
+}: TransactionsSectionProps) => {
   const [internalRefreshKey, setInternalRefreshKey] = useState(0)
 
   // Use external refresh key if provided, otherwise use internal state
@@ -15,6 +19,10 @@ const TransactionsSection = ({ refreshKey: externalRefreshKey }: TransactionsSec
 
   const handleRefresh = () => {
     setInternalRefreshKey((prev) => prev + 1)
+    // Also call external refresh if provided (to update analytics)
+    if (externalOnRefresh) {
+      externalOnRefresh()
+    }
   }
 
   return (

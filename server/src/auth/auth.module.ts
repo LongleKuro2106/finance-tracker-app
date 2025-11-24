@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
+import { AccountLockoutService } from '../common/services/account-lockout.service';
+import { AuditLoggerService } from '../common/services/audit-logger.service';
+import { RefreshTokenService } from '../common/services/refresh-token.service';
 
 @Module({
   imports: [
@@ -15,20 +17,31 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev_jwt_secret',
+      secret:
+        process.env.JWT_SECRET ||
+        (() => {
+          if (process.env.NODE_ENV === 'production') {
+            throw new Error(
+              'JWT_SECRET environment variable is required in production',
+            );
+          }
+          return 'dev_jwt_secret';
+        })(),
       signOptions: { expiresIn: '60m' },
     }),
     ThrottlerModule.forRoot([
-      { name: 'short', ttl: 60_000, limit: 3 },
-      { name: 'long', ttl: 3_600_000, limit: 10 },
+      { name: 'short', ttl: 60_000, limit: 5 },
+      { name: 'long', ttl: 3_600_000, limit: 20 },
     ]),
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
     JwtStrategy,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    AccountLockoutService,
+    AuditLoggerService,
+    RefreshTokenService,
   ],
-  exports: [AuthService],
+  exports: [AuthService, RefreshTokenService],
 })
 export class AuthModule {}
