@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { Budget } from './budget-card'
 import BudgetCard from './budget-card'
 import BudgetForm from './budget-form'
-import { apiDelete, apiPost, apiPatch, apiGet } from '@/lib/api-client'
 import DeleteBudgetDialog from './delete-budget-dialog'
+import { useBudgets } from '@/hooks/use-budgets'
+import { useDialog } from '@/hooks/use-dialog'
 
 interface BudgetListProps {
   refreshKey?: number
@@ -13,116 +14,78 @@ interface BudgetListProps {
 }
 
 const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
-  const [budgets, setBudgets] = useState<Budget[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    budgets,
+    loading,
+    error,
+    refetch,
+    deleteBudget,
+    preserveBudget,
+    togglePreserve,
+  } = useBudgets()
+
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
   const [deletingBudget, setDeletingBudget] = useState<Budget | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  const formDialog = useDialog()
 
-  const fetchBudgets = async (): Promise<Budget[]> => {
-    return apiGet<Budget[]>('/api/budgets')
-  }
-
+  // Refetch when refreshKey changes
   useEffect(() => {
-    const loadBudgets = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await fetchBudgets()
-        setBudgets(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load budgets')
-      } finally {
-        setLoading(false)
-      }
+    if (refreshKey !== undefined) {
+      refetch()
     }
+  }, [refreshKey, refetch])
 
-    loadBudgets()
-  }, [refreshKey])
-
-  const handleEdit = (budget: Budget) => {
+  const handleEdit = useCallback((budget: Budget) => {
     setEditingBudget(budget)
-    setIsFormOpen(true)
-  }
+    formDialog.open()
+  }, [formDialog])
 
-  const handleDeleteClick = (budget: Budget) => {
+  const handleDeleteClick = useCallback((budget: Budget) => {
     setDeletingBudget(budget)
-  }
+  }, [])
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deletingBudget) return
 
     setIsDeleting(true)
     try {
-      await apiDelete(
-        `/api/budgets/${deletingBudget.month}/${deletingBudget.year}`,
-      )
-
+      await deleteBudget(deletingBudget.month, deletingBudget.year)
       setDeletingBudget(null)
-      if (onRefresh) {
-        onRefresh()
-      } else {
-        const data = await fetchBudgets()
-        setBudgets(data)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete budget')
+      onRefresh?.()
+    } catch {
+      // Error handled by hook
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [deletingBudget, deleteBudget, onRefresh])
 
-  const handlePreserve = async (budget: Budget) => {
-    try {
-      await apiPost(`/api/budgets/${budget.month}/${budget.year}/preserve`, {
-        preserve: true,
-      })
+  const handlePreserve = useCallback(
+    async (budget: Budget) => {
+      await preserveBudget(budget.month, budget.year)
+      onRefresh?.()
+    },
+    [preserveBudget, onRefresh],
+  )
 
-      if (onRefresh) {
-        onRefresh()
-      } else {
-        const data = await fetchBudgets()
-        setBudgets(data)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to preserve budget')
-    }
-  }
+  const handleTogglePreserve = useCallback(
+    async (budget: Budget) => {
+      await togglePreserve(budget.month, budget.year)
+      onRefresh?.()
+    },
+    [togglePreserve, onRefresh],
+  )
 
-  const handleTogglePreserve = async (budget: Budget) => {
-    try {
-      await apiPatch(
-        `/api/budgets/${budget.month}/${budget.year}/toggle-preserve`,
-        {},
-      )
-
-      if (onRefresh) {
-        onRefresh()
-      } else {
-        const data = await fetchBudgets()
-        setBudgets(data)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle preserve setting')
-    }
-  }
-
-  const handleFormSuccess = () => {
-    setIsFormOpen(false)
+  const handleFormSuccess = useCallback(() => {
+    formDialog.close()
     setEditingBudget(null)
-    if (onRefresh) {
-      onRefresh()
-    } else {
-      fetchBudgets().then((data) => setBudgets(data)).catch(() => {})
-    }
-  }
+    onRefresh?.()
+  }, [formDialog, onRefresh])
 
-  const handleFormClose = () => {
-    setIsFormOpen(false)
+  const handleFormClose = useCallback(() => {
+    formDialog.close()
     setEditingBudget(null)
-  }
+  }, [formDialog])
 
   if (loading) {
     return (
@@ -169,9 +132,9 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
         ))}
       </div>
 
-      {isFormOpen && (
+      {formDialog.isOpen && (
         <BudgetForm
-          isOpen={isFormOpen}
+          isOpen={formDialog.isOpen}
           onClose={handleFormClose}
           onSuccess={handleFormSuccess}
           budget={editingBudget}

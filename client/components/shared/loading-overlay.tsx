@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
-const LoadingOverlay = () => {
+const LoadingOverlayContent = () => {
   const pathname = usePathname()
   const search = useSearchParams()
   const [visible, setVisible] = useState(false)
@@ -29,6 +29,14 @@ const LoadingOverlay = () => {
     >
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-neutral-300 border-t-blue-600" />
     </div>
+  )
+}
+
+const LoadingOverlay = () => {
+  return (
+    <Suspense fallback={null}>
+      <LoadingOverlayContent />
+    </Suspense>
   )
 }
 

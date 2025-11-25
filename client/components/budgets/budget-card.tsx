@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 
 export interface BudgetStatus {
@@ -29,43 +30,90 @@ interface BudgetCardProps {
   onTogglePreserve: (budget: Budget) => void
 }
 
-const BudgetCard = ({
-  budget,
-  onEdit,
-  onDelete,
-  onPreserve,
-  onTogglePreserve,
-}: BudgetCardProps) => {
-  const monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ]
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount)
-  }
+const BudgetCard = memo(
+  ({
+    budget,
+    onEdit,
+    onDelete,
+    onPreserve,
+    onTogglePreserve,
+  }: BudgetCardProps) => {
+    const formatAmount = useCallback((amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(amount)
+    }, [])
 
-  const getMonthName = (month: number) => {
-    return monthNames[month - 1] || `Month ${month}`
-  }
+    const getMonthName = useCallback((month: number) => {
+      return MONTH_NAMES[month - 1] || `Month ${month}`
+    }, [])
 
-  const spent = budget.status?.spent ?? 0
-  const budgetAmount = budget.status?.budget ?? budget.amount
-  const exceeded = budget.status?.exceeded ?? false
-  const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0
+    const spent = useMemo(() => budget.status?.spent ?? 0, [budget.status?.spent])
+    const budgetAmount = useMemo(
+      () => budget.status?.budget ?? budget.amount,
+      [budget.status?.budget, budget.amount],
+    )
+    const exceeded = useMemo(
+      () => budget.status?.exceeded ?? false,
+      [budget.status?.exceeded],
+    )
+    const percentage = useMemo(
+      () => (budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0),
+      [budgetAmount, spent],
+    )
+
+    const monthName = useMemo(
+      () => getMonthName(budget.month),
+      [getMonthName, budget.month],
+    )
+    const formattedBudgetAmount = useMemo(
+      () => formatAmount(budgetAmount),
+      [formatAmount, budgetAmount],
+    )
+    const formattedSpent = useMemo(
+      () => formatAmount(spent),
+      [formatAmount, spent],
+    )
+    const formattedRemaining = useMemo(
+      () => formatAmount(Math.max(0, budgetAmount - spent)),
+      [formatAmount, budgetAmount, spent],
+    )
+    const formattedOver = useMemo(
+      () => (exceeded ? formatAmount(spent - budgetAmount) : ''),
+      [formatAmount, exceeded, spent, budgetAmount],
+    )
+
+    const handleEdit = useCallback(() => {
+      onEdit(budget)
+    }, [onEdit, budget])
+
+    const handleDelete = useCallback(() => {
+      onDelete(budget)
+    }, [onDelete, budget])
+
+    const handlePreserve = useCallback(() => {
+      onPreserve(budget)
+    }, [onPreserve, budget])
+
+    const handleTogglePreserve = useCallback(() => {
+      onTogglePreserve(budget)
+    }, [onTogglePreserve, budget])
 
   return (
     <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 bg-white dark:bg-neutral-900">
@@ -73,10 +121,10 @@ const BudgetCard = ({
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold">
-            {getMonthName(budget.month)} {budget.year}
+            {monthName} {budget.year}
           </h3>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-            Budget: {formatAmount(budgetAmount)}
+            Budget: {formattedBudgetAmount}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -84,7 +132,7 @@ const BudgetCard = ({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => onEdit(budget)}
+            onClick={handleEdit}
             aria-label="Edit budget"
             className="h-8 w-8"
           >
@@ -106,7 +154,7 @@ const BudgetCard = ({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => onDelete(budget)}
+            onClick={handleDelete}
             aria-label="Delete budget"
             className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
           >
@@ -131,7 +179,7 @@ const BudgetCard = ({
       <div className="mb-4">
         <div className="flex items-center justify-between text-sm mb-2">
           <span className="text-neutral-600 dark:text-neutral-400">
-            Spent: {formatAmount(spent)}
+            Spent: {formattedSpent}
           </span>
           <span
             className={`font-medium ${
@@ -158,10 +206,10 @@ const BudgetCard = ({
           />
         </div>
         <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-          <span>Remaining: {formatAmount(Math.max(0, budgetAmount - spent))}</span>
+          <span>Remaining: {formattedRemaining}</span>
           {exceeded && (
             <span className="text-red-600 dark:text-red-400">
-              Over by: {formatAmount(spent - budgetAmount)}
+              Over by: {formattedOver}
             </span>
           )}
         </div>
@@ -188,7 +236,7 @@ const BudgetCard = ({
               type="checkbox"
               id={`preserve-${budget.id}`}
               checked={budget.preserveToNextMonth}
-              onChange={() => onTogglePreserve(budget)}
+              onChange={handleTogglePreserve}
               className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary cursor-pointer"
               aria-label="Preserve budget to next month"
             />
@@ -208,7 +256,7 @@ const BudgetCard = ({
         <Button
           type="button"
           variant="outline"
-          onClick={() => onPreserve(budget)}
+          onClick={handlePreserve}
           className="w-full"
         >
           Create Next Month Budget Now
@@ -216,7 +264,9 @@ const BudgetCard = ({
       </div>
     </div>
   )
-}
+})
+
+BudgetCard.displayName = 'BudgetCard'
 
 export default BudgetCard
 

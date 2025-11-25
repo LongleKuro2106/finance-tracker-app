@@ -11,14 +11,21 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
-@Throttle({ default: { limit: 100, ttl: 60_000 } }) // 100 requests per minute per user
+@UseGuards(JwtAuthGuard, DevThrottlerGuard)
+@Throttle({
+  default: {
+    limit:
+      process.env.NODE_ENV === 'production' ? 100 : Number.MAX_SAFE_INTEGER,
+    ttl: 60_000,
+  },
+}) // 100 requests per minute in production, unlimited in dev
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
