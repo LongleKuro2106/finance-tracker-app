@@ -54,14 +54,11 @@ export class TransactionsService {
     const transactionDate = new Date(dto.date);
     transactionDate.setUTCHours(0, 0, 0, 0);
 
-    // Resolve category name to ID if provided
-    let categoryId: number | null = null;
-    if (dto.categoryName) {
-      const category = await this.categoriesService.findByName(
-        dto.categoryName,
-      );
-      categoryId = category.id;
-    }
+    // Resolve category name to ID
+    // If no category provided, default to "Uncategorized" so transactions appear in charts
+    const categoryNameToUse = dto.categoryName || 'Uncategorized';
+    const category = await this.categoriesService.findByName(categoryNameToUse);
+    const categoryId = category.id;
 
     const created = await this.prisma.transaction.create({
       data: {
@@ -109,7 +106,15 @@ export class TransactionsService {
       }
       if (dto.categoryName !== undefined) {
         if (dto.categoryName === null) {
-          updateData.category = { disconnect: true };
+          // Explicit null means remove category - default to "Uncategorized" instead
+          const category =
+            await this.categoriesService.findByName('Uncategorized');
+          updateData.category = { connect: { id: category.id } };
+        } else if (dto.categoryName === '') {
+          // Empty string means use default "Uncategorized"
+          const category =
+            await this.categoriesService.findByName('Uncategorized');
+          updateData.category = { connect: { id: category.id } };
         } else {
           const category = await this.categoriesService.findByName(
             dto.categoryName,

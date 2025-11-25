@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
-export const GET = async (request: NextRequest) => {
+export const GET = async () => {
   try {
     const token = await getAccessToken()
 

@@ -343,8 +343,57 @@ export class AuthService {
 
   async updateProfile(
     userId: string,
-    updateData: { password?: string; email?: string },
+    updateData: {
+      password?: string;
+      confirmPassword?: string;
+      email?: string;
+      oldPassword?: string;
+    },
   ) {
+    // Get current user to verify old password
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!currentUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify old password if changing email or password
+    if (updateData.email !== undefined || updateData.password !== undefined) {
+      if (!updateData.oldPassword) {
+        throw new UnauthorizedException(
+          'Old password is required to update email or password',
+        );
+      }
+
+      // Verify old password matches
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      const isOldPasswordValid = (await compare(
+        updateData.oldPassword,
+        currentUser.passwordHash,
+      )) as boolean;
+
+      if (!isOldPasswordValid) {
+        throw new UnauthorizedException('Old password is incorrect');
+      }
+    }
+
+    // Verify password confirmation if changing password
+    if (updateData.password !== undefined) {
+      if (!updateData.confirmPassword) {
+        throw new UnauthorizedException(
+          'Password confirmation is required when changing password',
+        );
+      }
+
+      if (updateData.password !== updateData.confirmPassword) {
+        throw new ConflictException(
+          'New password and confirmation do not match',
+        );
+      }
+    }
+
     const updatePayload: {
       email?: string;
       passwordHash?: string;

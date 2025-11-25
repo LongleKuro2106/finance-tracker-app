@@ -9,7 +9,8 @@ import {
   ValidationPipe,
   Req,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,13 +21,20 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
 import type { Request } from 'express';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseGuards(DevThrottlerGuard)
+  @Throttle({
+    default: {
+      limit: isProduction ? 5 : Number.MAX_SAFE_INTEGER,
+      ttl: 60_000,
+    },
+  })
   signup(@Body(ValidationPipe) body: SignupDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -34,8 +42,13 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } }) // IP-based rate limiting
+  @UseGuards(DevThrottlerGuard)
+  @Throttle({
+    default: {
+      limit: isProduction ? 5 : Number.MAX_SAFE_INTEGER,
+      ttl: 60_000,
+    },
+  }) // IP-based rate limiting (disabled in dev)
   login(@Body(ValidationPipe) body: LoginDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -43,8 +56,13 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @UseGuards(DevThrottlerGuard)
+  @Throttle({
+    default: {
+      limit: isProduction ? 10 : Number.MAX_SAFE_INTEGER,
+      ttl: 60_000,
+    },
+  })
   refresh(@Body(ValidationPipe) body: RefreshTokenDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];

@@ -30,6 +30,12 @@ export interface CategoryData {
   total: number; // income - expense (net for this category)
 }
 
+export interface DailyData {
+  day: number; // Day of month (1-31)
+  date: string; // ISO date string (YYYY-MM-DD format)
+  expense: number;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -233,5 +239,67 @@ export class AnalyticsService {
       });
 
     return monthlyData;
+  }
+
+  /**
+   * Get daily spending for the current month
+   * Returns expense totals grouped by day for the current month
+   * Optimized for daily spending line charts
+   */
+  async getDailySpending(
+    userId: string,
+    year?: number,
+    month?: number,
+  ): Promise<DailyData[]> {
+    const now = new Date();
+    const targetYear = year ?? now.getFullYear();
+    const targetMonth = month ?? now.getMonth() + 1; // 1-12
+
+    // Get first and last day of the target month
+    const startDate = new Date(targetYear, targetMonth - 1, 1);
+    const endDate = new Date(targetYear, targetMonth, 0); // Last day of month
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        type: 'expense', // Only expenses for daily spending
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        amount: true,
+        date: true,
+      },
+    });
+
+    // Group by day
+    const dailyMap = new Map<number, number>();
+
+    transactions.forEach((transaction) => {
+      const date = new Date(transaction.date);
+      const day = date.getDate(); // 1-31
+      const amount = Number(transaction.amount);
+
+      const existing = dailyMap.get(day) ?? 0;
+      dailyMap.set(day, existing + amount);
+    });
+
+    // Convert to array and fill missing days with 0
+    const daysInMonth = endDate.getDate();
+    const dailyData: DailyData[] = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const expense = dailyMap.get(day) ?? 0;
+      const dateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      dailyData.push({
+        day,
+        date: dateStr,
+        expense,
+      });
+    }
+
+    return dailyData;
   }
 }

@@ -1,0 +1,43 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import ProfileWrapper from '../../components/profile/profile-wrapper'
+import { getApiBaseUrl } from '@/lib/utils'
+
+const ProfilePage = async () => {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('access_token')?.value
+
+  // If no access token, redirect to login
+  if (!accessToken) {
+    redirect('/login')
+  }
+
+  // Call backend /auth/me endpoint to validate token and get user info
+  const apiBase = getApiBaseUrl()
+  const res = await fetch(`${apiBase}/auth/me`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  })
+
+  // If unauthorized, redirect to login
+  if (!res.ok) {
+    redirect('/login')
+  }
+
+  const userData = await res.json()
+  const username = userData?.username
+  const email = userData?.email
+
+  if (!username) {
+    redirect('/login')
+  }
+
+  return <ProfileWrapper username={username} email={email} />
+}
+
+export default ProfilePage
+

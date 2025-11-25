@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { apiGet } from '@/lib/api-client'
+import { useMemo } from 'react'
+import { useAnalytics } from '@/lib/analytics-context'
 import {
   LineChart,
   Line,
@@ -17,61 +17,37 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 
-interface MonthlyData {
-  month: number
-  year: number
-  date: string
-  income: number
-  expense: number
-  savings: number
-}
-
-interface MonthlySpendingChartProps {
-  refreshKey?: number
-}
-
-const MonthlySpendingChart = ({ refreshKey }: MonthlySpendingChartProps) => {
-  const [data, setData] = useState<MonthlyData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchMonthly = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const monthlyData = await apiGet<MonthlyData[]>('/api/analytics/monthly?months=12')
-        setData(monthlyData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load monthly data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchMonthly()
-  }, [refreshKey])
+const MonthlySpendingChart = () => {
+  const { dailyData, loading, error } = useAnalytics()
 
   const chartConfig = {
     expense: {
-      label: 'Expenses',
+      label: 'Daily Expenses',
       color: '#FF6B6B', // Light red/coral
     },
   } satisfies ChartConfig
 
-  const chartData = data.map((item) => {
-    const date = new Date(`${item.date}-01`)
-    const monthName = date.toLocaleDateString('en-US', { month: 'short' })
-    return {
-      month: `${monthName} ${item.year}`,
+  const chartData = useMemo(() => {
+    if (!dailyData || dailyData.length === 0) return []
+
+    return dailyData.map((item) => ({
+      day: item.day,
+      date: item.date,
       expense: item.expense,
-    }
-  })
+    }))
+  }, [dailyData])
+
+  const currentMonth = useMemo(() => {
+    const now = new Date()
+    return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }, [])
 
   if (loading) {
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Daily Spending - {currentMonth}
+        </h3>
         <div className="h-[300px] flex items-center justify-center">
           <p className="text-neutral-600 dark:text-neutral-400">Loading...</p>
         </div>
@@ -82,7 +58,9 @@ const MonthlySpendingChart = ({ refreshKey }: MonthlySpendingChartProps) => {
   if (error) {
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Daily Spending - {currentMonth}
+        </h3>
         <div className="h-[300px] flex items-center justify-center">
           <p className="text-red-600 dark:text-red-400">{error}</p>
         </div>
@@ -90,13 +68,15 @@ const MonthlySpendingChart = ({ refreshKey }: MonthlySpendingChartProps) => {
     )
   }
 
-  if (data.length === 0) {
+  if (!dailyData || dailyData.length === 0) {
     return (
       <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+        <h3 className="text-lg font-semibold mb-4">
+          Daily Spending - {currentMonth}
+        </h3>
         <div className="h-[300px] flex items-center justify-center">
           <p className="text-neutral-600 dark:text-neutral-400">
-            No spending data available
+            No spending data available for this month
           </p>
         </div>
       </div>
@@ -105,13 +85,15 @@ const MonthlySpendingChart = ({ refreshKey }: MonthlySpendingChartProps) => {
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-      <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+      <h3 className="text-lg font-semibold mb-4">
+        Daily Spending - {currentMonth}
+      </h3>
       <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData} accessibilityLayer>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis
-              dataKey="month"
+              dataKey="day"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -120,15 +102,23 @@ const MonthlySpendingChart = ({ refreshKey }: MonthlySpendingChartProps) => {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => `$${value}`}
+              tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Expense']}
+                  labelFormatter={(label) => String(label)}
+                />
+              }
+            />
             <Line
               type="monotone"
               dataKey="expense"
               stroke="var(--color-expense)"
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>

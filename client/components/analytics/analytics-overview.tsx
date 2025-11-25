@@ -1,39 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { apiGet } from '@/lib/api-client'
+import { useAnalytics } from '@/lib/analytics-context'
 
-interface OverviewData {
-  totalRevenue: number
-  totalExpenses: number
-  netBalance: number
-}
-
-interface AnalyticsOverviewProps {
-  refreshKey?: number
-}
-
-const AnalyticsOverview = ({ refreshKey }: AnalyticsOverviewProps) => {
-  const [data, setData] = useState<OverviewData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchOverview = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const overviewData = await apiGet<OverviewData>('/api/analytics/overview')
-        setData(overviewData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load overview')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchOverview()
-  }, [refreshKey])
+const AnalyticsOverview = () => {
+  const { overviewData, loading, error } = useAnalytics()
+  const data = overviewData
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

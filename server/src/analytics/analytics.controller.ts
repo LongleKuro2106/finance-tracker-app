@@ -1,15 +1,23 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import {
   AnalyticsService,
   OverviewResponse,
   MonthlyData,
   CategoryData,
+  DailyData,
 } from './analytics.service';
 
-@UseGuards(JwtAuthGuard, ThrottlerGuard)
-@Throttle({ default: { limit: 50, ttl: 60_000 } }) // 50 requests per minute (analytics are expensive)
+// Use DevThrottlerGuard which disables throttling in development
+@UseGuards(JwtAuthGuard, DevThrottlerGuard)
+@Throttle({
+  default: {
+    limit: process.env.NODE_ENV === 'production' ? 50 : Number.MAX_SAFE_INTEGER,
+    ttl: 60_000,
+  },
+}) // 50 requests per minute in production, unlimited in dev
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
@@ -59,5 +67,20 @@ export class AnalyticsController {
     };
 
     return this.analyticsService.getCategories(req.user.userId, dateRange);
+  }
+
+  @Get('daily')
+  getDailySpending(
+    @Req() req: { user: { userId: string } },
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+  ): Promise<DailyData[]> {
+    const yearNum = year ? Number(year) : undefined;
+    const monthNum = month ? Number(month) : undefined;
+    return this.analyticsService.getDailySpending(
+      req.user.userId,
+      yearNum,
+      monthNum,
+    );
   }
 }

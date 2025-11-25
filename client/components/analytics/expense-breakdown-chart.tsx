@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import {
   ChartContainer,
@@ -15,46 +15,18 @@ import {
   PARENT_CATEGORY_COLORS,
   PARENT_CATEGORIES,
 } from '@/lib/category-utils'
-import { apiGet } from '@/lib/api-client'
-
-interface CategoryData {
-  categoryId: number | null
-  categoryName: string | null
-  income: number
-  expense: number
-  total: number
-}
+import { useAnalytics } from '@/lib/analytics-context'
 
 interface ParentCategoryData {
   parentCategory: string
   expense: number
 }
 
-interface ExpenseBreakdownChartProps {
-  refreshKey?: number
-}
+const ExpenseBreakdownChart = () => {
+  const { categoriesData, loading, error } = useAnalytics()
 
-const ExpenseBreakdownChart = ({ refreshKey }: ExpenseBreakdownChartProps) => {
-  const [data, setData] = useState<CategoryData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const categoriesData = await apiGet<CategoryData[]>('/api/analytics/categories')
-        setData(categoriesData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load categories')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCategories()
-  }, [refreshKey])
+  // Memoize data to ensure stable reference for useMemo dependencies
+  const data = useMemo(() => categoriesData || [], [categoriesData])
 
   // Group expenses by parent category
   const parentCategoryData = useMemo(() => {
