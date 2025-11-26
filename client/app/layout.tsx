@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 // @ts-ignore - CSS import for side effects
 import "./globals.css";
 import LoadingOverlay from "@/components/shared/loading-overlay";
+import { ToastProvider } from "@/components/shared/toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +31,10 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <LoadingOverlay />
-        {children}
+        <ToastProvider>
+          <LoadingOverlay />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

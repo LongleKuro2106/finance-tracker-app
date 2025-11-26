@@ -23,19 +23,40 @@ const DashboardPage = async () => {
     cache: 'no-store', // Always fetch fresh data
   })
 
-  // If unauthorized, redirect to login (middleware will handle cookie clearing)
-  if (!res.ok) {
-    redirect('/login')
+  // Handle rate limiting (429) - don't logout, allow access
+  // Client-side components will handle showing the rate limit error
+  if (res.status === 429) {
+    // Rate limit hit - allow page to load, client will show error
+    // Return a default username or handle gracefully
+    // The dashboard wrapper will handle showing errors
+  } else if (!res.ok) {
+    // Only redirect to login on actual auth failures (401), not rate limits
+    if (res.status === 401) {
+      redirect('/login')
+    }
+    // For other errors, try to continue
   }
 
-  const userData = await res.json()
+  // Try to parse user data, but handle errors gracefully
+  let userData: { username?: string } = {}
+  try {
+    userData = await res.json()
+  } catch {
+    // If JSON parsing fails (e.g., on 429), use empty object
+    // Dashboard wrapper will handle missing data
+  }
+
   const username = userData?.username
 
-  if (!username) {
+  // Only redirect if we have no username AND it's not a rate limit
+  if (!username && res.status !== 429) {
     redirect('/login')
   }
 
-  return <DashboardWrapper username={username} />
+  // Provide fallback username for rate limit cases where we can't fetch user data
+  const displayUsername = username || 'User'
+
+  return <DashboardWrapper username={displayUsername} />
 }
 
 export default DashboardPage
