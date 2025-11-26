@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/shared/toast'
 
 const LoginSchema = z.object({
   usernameOrEmail: z.string().min(1, 'Username or email is required'),
@@ -18,6 +19,7 @@ type LoginValues = z.infer<typeof LoginSchema>
 
 const LoginPage = () => {
   const router = useRouter()
+  const { showToast } = useToast()
   const [submitError, setSubmitError] = useState('')
   const {
     register,
@@ -37,9 +39,18 @@ const LoginPage = () => {
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setSubmitError(data?.message ?? 'Login failed')
+      const errorMessage = data?.message ?? 'Login failed'
+      setSubmitError(errorMessage)
+
+      // Show toast notification for better visibility
+      if (res.status === 429) {
+        showToast(errorMessage, 'warning', 8000)
+      } else {
+        showToast(errorMessage, 'error', 5000)
+      }
       return
     }
+    showToast('Login successful!', 'success', 2000)
     router.replace('/dashboard')
     router.refresh()
   }

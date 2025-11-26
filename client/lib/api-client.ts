@@ -12,6 +12,7 @@
 export interface ApiError {
   message: string
   status?: number
+  retryAfter?: number | null // Milliseconds until retry is allowed
 }
 
 // Request deduplication: track ongoing requests to prevent duplicates
@@ -76,17 +77,38 @@ export async function secureApiRequest<T>(
       // Handle error responses
       if (!response.ok) {
         let errorMessage = 'Request failed'
+        let retryAfter: number | null = null
+
         try {
-          const errorData = (await response.json()) as { message?: string }
+          const errorData = (await response.json()) as {
+            message?: string
+            retryAfter?: number
+          }
           errorMessage = errorData.message || errorMessage
+          retryAfter = errorData.retryAfter || null
         } catch {
           // If response is not JSON, use status text
           errorMessage = response.statusText || errorMessage
         }
 
+        // Check for Retry-After header
+        const retryAfterHeader = response.headers.get('Retry-After')
+        if (retryAfterHeader && !retryAfter) {
+          retryAfter = parseInt(retryAfterHeader, 10) * 1000 // Convert to milliseconds
+        }
+
         const error: ApiError = {
           message: errorMessage,
           status: response.status,
+          retryAfter,
+        }
+
+        // Handle rate limiting (429) - Don't logout, just show error
+        if (response.status === 429) {
+          // Create user-friendly message
+          const retrySeconds = retryAfter ? Math.ceil(retryAfter / 1000) : 60
+          error.message = `Too many requests. Please wait ${retrySeconds} seconds before trying again.`
+          throw error
         }
 
         // Handle authentication errors

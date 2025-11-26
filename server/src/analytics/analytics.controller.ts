@@ -14,10 +14,15 @@ import {
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
 @Throttle({
   default: {
-    limit: process.env.NODE_ENV === 'production' ? 50 : Number.MAX_SAFE_INTEGER,
-    ttl: 60_000,
+    limit: process.env.NODE_ENV === 'production' ? 40 : Number.MAX_SAFE_INTEGER,
+    ttl: 60_000, // 1 minute
   },
-}) // 50 requests per minute in production, unlimited in dev
+  long: {
+    limit:
+      process.env.NODE_ENV === 'production' ? 500 : Number.MAX_SAFE_INTEGER,
+    ttl: 3_600_000, // 1 hour
+  },
+}) // 40 requests per minute (10 refreshes), 500 requests per hour in production (optimal UX), unlimited in dev
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}

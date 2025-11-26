@@ -29,10 +29,13 @@ export const POST = async (request: Request) => {
   if (data.access_token && data.refresh_token) {
     const cookieStore = await cookies()
 
+    // Note: secure flag should be true only with HTTPS
+    // For local network testing, set SECURE_COOKIES=false
+    const isSecure = process.env.SECURE_COOKIES !== 'false' && process.env.NODE_ENV === 'production'
     cookieStore.set('access_token', data.access_token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       path: '/',
       maxAge: 60 * 60, // 1 hour
     })
@@ -40,7 +43,7 @@ export const POST = async (request: Request) => {
     cookieStore.set('refresh_token', data.refresh_token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
     })

@@ -61,13 +61,24 @@ export async function middleware(request: NextRequest) {
         })
 
         if (!refreshResponse.ok) {
-          // Refresh failed, redirect to login
-          const url = new URL('/login', request.url)
-          const redirectResponse = NextResponse.redirect(url)
-          // Clear cookies
-          redirectResponse.cookies.delete('access_token')
-          redirectResponse.cookies.delete('refresh_token')
-          return redirectResponse
+          // Handle rate limiting (429) - don't logout, allow request to proceed
+          if (refreshResponse.status === 429) {
+            // Rate limit hit during refresh - let request proceed
+            // Client-side components will handle showing rate limit errors
+            return response
+          }
+          // Only logout on actual auth failures (401), not rate limits
+          if (refreshResponse.status === 401) {
+            // Refresh failed, redirect to login
+            const url = new URL('/login', request.url)
+            const redirectResponse = NextResponse.redirect(url)
+            // Clear cookies
+            redirectResponse.cookies.delete('access_token')
+            redirectResponse.cookies.delete('refresh_token')
+            return redirectResponse
+          }
+          // For other errors, let request proceed (might be temporary)
+          return response
         }
 
         // Get new cookies from refresh response

@@ -13,7 +13,7 @@ async function bootstrap() {
   // Client runs on port 3000, server on port 3010
   const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
-    : ['http://localhost:3000'];
+    : ['http://localhost:3000']; // Default: localhost only
 
   app.enableCors({
     origin: (
@@ -65,6 +65,9 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3010);
+  // Bind to 0.0.0.0 to allow network access (not just localhost)
+  const port = process.env.PORT ?? 3010;
+  const host = process.env.HOST ?? '0.0.0.0';
+  await app.listen(port, host);
 }
 void bootstrap();
