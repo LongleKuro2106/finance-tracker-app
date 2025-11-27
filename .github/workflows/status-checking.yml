@@ -59,6 +59,7 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD_TEST || 'postgres' }}
           POSTGRES_DB: finance_tracker_test
           JWT_SECRET: ${{ secrets.JWT_SECRET_TEST || 'test_jwt_secret_for_ci_fallback' }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || '' }}
           NODE_ENV: test
         run: |
           cd server
