@@ -83,7 +83,7 @@ All hooks provide TypeScript type safety and are optimized for performance.
 - `POST /auth/logout` - Logout and revoke tokens
 - `GET /auth/me` - Get current user info
 - `PATCH /auth/me` - Update user profile (email, password)
-- `DELETE /auth/me` - Delete user account
+- `DELETE /auth/me` - Delete user account (requires password confirmation)
 
 ### Transactions (`/transactions`)
 - `GET /transactions` - List user transactions (with pagination)

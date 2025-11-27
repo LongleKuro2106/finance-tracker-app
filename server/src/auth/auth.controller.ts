@@ -16,6 +16,7 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
@@ -109,7 +110,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   deleteOwnAccount(
     @CurrentUser() user: authenticatedUserInterface.AuthenticatedUser,
+    @Body(ValidationPipe) deleteAccountDto: DeleteAccountDto,
+    @Req() req: Request,
   ) {
-    return this.authService.deleteOwnAccount(user.userId);
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.deleteOwnAccount(
+      user.userId,
+      deleteAccountDto.password,
+      ipAddress,
+      userAgent,
+    );
   }
 }

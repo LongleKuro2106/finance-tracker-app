@@ -82,3 +82,46 @@ export const PATCH = async (request: NextRequest) => {
     )
   }
 }
+
+export const DELETE = async (request: NextRequest) => {
+  const accessToken = await getAccessToken()
+
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const apiBase = getApiBaseUrl()
+    const res = await fetch(`${apiBase}/auth/me`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        await clearAuthCookies()
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      const errorData = await res.json().catch(() => ({}))
+      return NextResponse.json(
+        { error: errorData.message || 'Failed to delete account' },
+        { status: res.status },
+      )
+    }
+
+    // Clear cookies after successful deletion
+    await clearAuthCookies()
+
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch {
+    return NextResponse.json(
+      { error: 'Failed to delete account' },
+      { status: 500 },
+    )
+  }
+}
