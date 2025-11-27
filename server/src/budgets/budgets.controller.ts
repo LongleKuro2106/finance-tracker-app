@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -50,10 +51,19 @@ export class BudgetsController {
     @Query('month') month: string,
     @Query('year') year: string,
   ) {
+    const monthNum = Number(month);
+    const yearNum = Number(year);
+
+    if (isNaN(monthNum) || isNaN(yearNum)) {
+      throw new BadRequestException(
+        'Month and year query parameters are required and must be valid numbers',
+      );
+    }
+
     return this.budgetsService.checkBudgetStatus(
       req.user.userId,
-      Number(month),
-      Number(year),
+      monthNum,
+      yearNum,
     );
   }
 

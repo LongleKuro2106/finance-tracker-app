@@ -178,6 +178,12 @@ export async function apiPatch<T>(
 /**
  * DELETE request helper
  */
-export async function apiDelete<T>(url: string): Promise<T> {
-  return secureApiRequest<T>(url, { method: 'DELETE' })
+export async function apiDelete<T>(
+  url: string,
+  body?: unknown,
+): Promise<T> {
+  return secureApiRequest<T>(url, {
+    method: 'DELETE',
+    body,
+  })
 }

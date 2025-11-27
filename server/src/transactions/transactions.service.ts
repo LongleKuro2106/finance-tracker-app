@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { CategoriesService } from '../categories/categories.service';
@@ -8,6 +9,37 @@ import { CategoriesService } from '../categories/categories.service';
 interface ListOptions {
   cursor?: string;
   limit?: number;
+}
+
+// Helper function to format Decimal amounts to string with 2 decimal places
+function formatAmount(amount: string | number | Decimal): string {
+  const num =
+    typeof amount === 'string'
+      ? parseFloat(amount)
+      : amount instanceof Decimal
+        ? Number(amount)
+        : amount;
+  if (Number.isNaN(num)) {
+    return '0.00';
+  }
+  return num.toFixed(2);
+}
+
+// Helper function to validate UUID format
+function isValidUUID(id: string): boolean {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+// Helper function to format transaction response
+function formatTransactionResponse<
+  T extends { amount: string | number | Decimal },
+>(transaction: T): Omit<T, 'amount'> & { amount: string } {
+  return {
+    ...transaction,
+    amount: formatAmount(transaction.amount),
+  };
 }
 
 @Injectable()
@@ -46,7 +78,11 @@ export class TransactionsService {
     const hasNext = items.length > pageSize;
     const data = hasNext ? items.slice(0, pageSize) : items;
     const nextCursor = hasNext ? String(data[data.length - 1]?.id) : null;
-    return { data, nextCursor, pageSize };
+    return {
+      data: data.map(formatTransactionResponse),
+      nextCursor,
+      pageSize,
+    };
   }
 
   async createForUser(userId: string, dto: CreateTransactionDto) {
@@ -73,10 +109,15 @@ export class TransactionsService {
         category: true,
       },
     });
-    return created;
+    return formatTransactionResponse(created);
   }
 
   async updateForUser(userId: string, id: string, dto: UpdateTransactionDto) {
+    // Validate UUID format first
+    if (!isValidUUID(id)) {
+      throw new NotFoundException('Transaction not found or unauthorized');
+    }
+
     try {
       // First verify the transaction exists and belongs to the user
       const existing = await this.prisma.transaction.findFirst({
@@ -135,21 +176,32 @@ export class TransactionsService {
           category: true,
         },
       });
-      return updated;
+      return formatTransactionResponse(updated);
     } catch (error: unknown) {
       if (
         error &&
         typeof error === 'object' &&
         'code' in error &&
-        error.code === 'P2025'
+        (error.code === 'P2025' ||
+          error.code === 'P2023' ||
+          (error.code === 'P2003' && 'meta' in error))
       ) {
         throw new NotFoundException('Transaction not found or unauthorized');
+      }
+      // If it's already a NotFoundException, rethrow it
+      if (error instanceof NotFoundException) {
+        throw error;
       }
       throw error;
     }
   }
 
   async deleteForUser(userId: string, id: string) {
+    // Validate UUID format first
+    if (!isValidUUID(id)) {
+      throw new NotFoundException('Transaction not found or unauthorized');
+    }
+
     try {
       // First verify the transaction exists and belongs to the user
       const existing = await this.prisma.transaction.findFirst({
@@ -175,9 +227,15 @@ export class TransactionsService {
         error &&
         typeof error === 'object' &&
         'code' in error &&
-        error.code === 'P2025'
+        (error.code === 'P2025' ||
+          error.code === 'P2023' ||
+          (error.code === 'P2003' && 'meta' in error))
       ) {
         throw new NotFoundException('Transaction not found or unauthorized');
+      }
+      // If it's already a NotFoundException, rethrow it
+      if (error instanceof NotFoundException) {
+        throw error;
       }
       throw error;
     }

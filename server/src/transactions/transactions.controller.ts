@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -43,6 +44,7 @@ export class TransactionsController {
   }
 
   @Post('search')
+  @HttpCode(200)
   listJson(
     @Req() req: { user: { userId: string } },
     @Body(ValidationPipe)

@@ -14,6 +14,7 @@ import { AccountLockoutService } from '../common/services/account-lockout.servic
 import {
   AuditLoggerService,
   AuditEventType,
+  type AuditLogEntry,
 } from '../common/services/audit-logger.service';
 import { RefreshTokenService } from '../common/services/refresh-token.service';
 
@@ -437,7 +438,43 @@ export class AuthService {
     return user;
   }
 
-  async deleteOwnAccount(userId: string) {
+  async deleteOwnAccount(
+    userId: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    // Get current user to verify password
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!currentUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify password before deletion
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const isPasswordValid = (await compare(
+      password,
+      currentUser.passwordHash,
+    )) as boolean;
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Password is incorrect');
+    }
+
+    // Log account deletion
+    const auditEntry: AuditLogEntry = {
+      eventType: AuditEventType.ACCOUNT_DELETED as AuditEventType,
+      userId: currentUser.id,
+      username: currentUser.username,
+      ipAddress,
+      userAgent,
+      timestamp: new Date(),
+    };
+    this.auditLogger.log(auditEntry);
+
     // Delete user and cascade will handle related records
     await this.prisma.user.delete({
       where: { id: userId },

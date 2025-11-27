@@ -7,6 +7,7 @@ export enum AuditEventType {
   SIGNUP = 'SIGNUP',
   ACCOUNT_LOCKED = 'ACCOUNT_LOCKED',
   ACCOUNT_UNLOCKED = 'ACCOUNT_UNLOCKED',
+  ACCOUNT_DELETED = 'ACCOUNT_DELETED',
   TOKEN_REVOKED = 'TOKEN_REVOKED',
   ADMIN_ACTION = 'ADMIN_ACTION',
   SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
@@ -42,6 +43,7 @@ export class AuditLoggerService {
       case AuditEventType.LOGIN_FAILURE:
       case AuditEventType.LOGIN_LOCKED:
       case AuditEventType.ACCOUNT_LOCKED:
+      case AuditEventType.ACCOUNT_DELETED:
       case AuditEventType.SUSPICIOUS_ACTIVITY:
         this.logger.warn(JSON.stringify(logMessage));
         break;

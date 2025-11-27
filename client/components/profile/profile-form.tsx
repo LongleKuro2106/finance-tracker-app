@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import EditEmailDialog from './edit-email-dialog'
 import EditPasswordDialog from './edit-password-dialog'
+import DeleteAccountDialog from './delete-account-dialog'
 import { useRouter } from 'next/navigation'
 import { useDialog } from '@/hooks/use-dialog'
 
@@ -15,6 +16,7 @@ interface ProfileFormProps {
 const ProfileForm = ({ username, email }: ProfileFormProps) => {
   const emailDialog = useDialog()
   const passwordDialog = useDialog()
+  const deleteAccountDialog = useDialog()
   const [success, setSuccess] = useState<string | null>(null)
   const router = useRouter()
 
@@ -48,6 +50,14 @@ const ProfileForm = ({ username, email }: ProfileFormProps) => {
   const closePasswordDialog = useCallback(() => {
     passwordDialog.close()
   }, [passwordDialog])
+
+  const openDeleteAccountDialog = useCallback(() => {
+    deleteAccountDialog.open()
+  }, [deleteAccountDialog])
+
+  const closeDeleteAccountDialog = useCallback(() => {
+    deleteAccountDialog.close()
+  }, [deleteAccountDialog])
 
   const successMessage = useMemo(
     () =>
@@ -153,6 +163,27 @@ const ProfileForm = ({ username, email }: ProfileFormProps) => {
 
         {/* Success Message */}
         {successMessage}
+
+        {/* Delete Account Section */}
+        <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-red-600 dark:text-red-400">
+              Danger Zone
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Once you delete your account, there is no going back. Please be
+              certain.
+            </p>
+            <button
+              type="button"
+              onClick={openDeleteAccountDialog}
+              className="mt-3 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              aria-label="Delete account"
+            >
+              Delete Account
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Email Edit Dialog */}
@@ -168,6 +199,12 @@ const ProfileForm = ({ username, email }: ProfileFormProps) => {
         isOpen={passwordDialog.isOpen}
         onClose={closePasswordDialog}
         onSuccess={handlePasswordSuccess}
+      />
+
+      {/* Delete Account Dialog */}
+      <DeleteAccountDialog
+        isOpen={deleteAccountDialog.isOpen}
+        onClose={closeDeleteAccountDialog}
       />
     </>
   )
