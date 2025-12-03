@@ -43,6 +43,15 @@ jobs:
         run: |
           cd client
           npm ci
+      - name: Run client tests
+        env:
+          NODE_ENV: test
+          # NEXT_PUBLIC_API_BASE_URL is optional - tests mock API calls
+          # Setting it here for consistency, but tests work without it
+          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:3010'
+        run: |
+          cd client
+          npm test -- --passWithNoTests --ci --coverage=false
       - name: Setup database
         env:
           POSTGRES_USER: ${{ secrets.POSTGRES_USER_TEST || 'postgres' }}
