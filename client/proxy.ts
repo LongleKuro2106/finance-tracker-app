@@ -3,11 +3,14 @@ import { isTokenExpiringSoon } from './lib/auth-utils'
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/budgets/:path*',
-    '/transactions/:path*',
-    '/profile/:path*',
-    '/',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
 
@@ -15,11 +18,17 @@ export const config = {
 const refreshCache = new Map<string, { expiresAt: number; cookies: string[] }>()
 const REFRESH_CACHE_TTL = 30 * 1000 // 30 seconds
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Explicitly skip API routes - they should not be processed by proxy
+  if (pathname.startsWith('/api')) {
+    return NextResponse.next()
+  }
+
   const response = NextResponse.next()
 
   // Check authentication for protected routes
-  const pathname = request.nextUrl.pathname
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/budgets') ||
@@ -116,3 +125,4 @@ export async function middleware(request: NextRequest) {
 
   return response
 }
+
