@@ -9,7 +9,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' needed for Tailwind
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self' http://localhost:3010 https://*", // Allow API calls to backend
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010'} https://*`, // Allow API calls to backend
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -46,6 +46,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker
+  output: 'standalone',
   async headers() {
     return [
       {

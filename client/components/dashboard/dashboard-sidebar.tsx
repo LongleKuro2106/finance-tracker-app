@@ -1,122 +1,122 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import SignOutButton from '@/components/auth/signout'
-import { useLocalStorage } from '@/hooks/use-local-storage'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import SignOutButton from '@/components/auth/signout';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
 interface DashboardSidebarProps {
-  username?: string // Optional, not displayed anymore
-  onTransactionAdded?: () => void
-}
+  username?: string; // Optional, not displayed anymore
+  onTransactionAdded?: () => void;
+} 
 
-const DEFAULT_SIDEBAR_WIDTH_PERCENT = 8 // Default 8% of viewport
-const MIN_SIDEBAR_WIDTH_PERCENT = 5
-const MAX_SIDEBAR_WIDTH_PERCENT = 12
-const ICON_ONLY_THRESHOLD_PERCENT = 7.5 // Show icons only below this threshold
+const DEFAULT_SIDEBAR_WIDTH_PERCENT = 9; // Default 9% of viewport
+const MIN_SIDEBAR_WIDTH_PERCENT = 5;
+const MAX_SIDEBAR_WIDTH_PERCENT = 15;
+const ICON_ONLY_THRESHOLD_PERCENT = 9; // Show icons only below this threshold
 
 const DashboardSidebar = ({}: DashboardSidebarProps) => {
-  const pathname = usePathname()
+  const pathname = usePathname();
   const [sidebarWidthPercent, setSidebarWidthPercent] = useLocalStorage<number>(
     'sidebar-width-percent',
     DEFAULT_SIDEBAR_WIDTH_PERCENT,
-  )
-  const [isResizing, setIsResizing] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
-  const sidebarRef = useRef<HTMLElement>(null)
-  const resizeButtonRef = useRef<HTMLButtonElement>(null)
+  );
+  const [isResizing, setIsResizing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const resizeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Prevent hydration mismatch by only calculating width after mount
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   const isActive = (path: string) => {
-    return pathname === path
-  }
+    return pathname === path;
+  };
 
   const getSidebarWidth = useCallback(() => {
-    if (typeof window === 'undefined' || !isMounted) return 0
-    return (window.innerWidth * sidebarWidthPercent) / 100
-  }, [sidebarWidthPercent, isMounted])
+    if (typeof window === 'undefined' || !isMounted) return 0;
+    return (window.innerWidth * sidebarWidthPercent) / 100;
+  }, [sidebarWidthPercent, isMounted]);
 
   const isIconOnly = useMemo(() => {
-    if (!isMounted) return false // Default to false during SSR
-    return sidebarWidthPercent < ICON_ONLY_THRESHOLD_PERCENT
-  }, [sidebarWidthPercent, isMounted])
+    if (!isMounted) return false; // Default to false during SSR
+    return sidebarWidthPercent < ICON_ONLY_THRESHOLD_PERCENT;
+  }, [sidebarWidthPercent, isMounted]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizing(true)
-  }, [])
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+  }, []);
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isResizing) return
+      if (!isResizing) return;
 
-      const viewportWidth = window.innerWidth
-      const newWidthPercent = (e.clientX / viewportWidth) * 100
+      const viewportWidth = window.innerWidth;
+      const newWidthPercent = (e.clientX / viewportWidth) * 100;
 
       const clampedPercent = Math.max(
         MIN_SIDEBAR_WIDTH_PERCENT,
         Math.min(newWidthPercent, MAX_SIDEBAR_WIDTH_PERCENT),
-      )
+      );
 
-      setSidebarWidthPercent(clampedPercent)
+      setSidebarWidthPercent(clampedPercent);
     },
     [isResizing, setSidebarWidthPercent],
-  )
+  );
 
   const handleMouseUp = useCallback(() => {
-    setIsResizing(false)
-  }, [])
+    setIsResizing(false);
+  }, []);
 
   useEffect(() => {
     if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
 
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-      }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
     }
-  }, [isResizing, handleMouseMove, handleMouseUp])
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   // Ensure sidebar width stays within bounds on window resize
   useEffect(() => {
     const handleResize = () => {
       if (sidebarWidthPercent > MAX_SIDEBAR_WIDTH_PERCENT) {
-        setSidebarWidthPercent(MAX_SIDEBAR_WIDTH_PERCENT)
+        setSidebarWidthPercent(MAX_SIDEBAR_WIDTH_PERCENT);
       } else if (sidebarWidthPercent < MIN_SIDEBAR_WIDTH_PERCENT) {
-        setSidebarWidthPercent(MIN_SIDEBAR_WIDTH_PERCENT)
+        setSidebarWidthPercent(MIN_SIDEBAR_WIDTH_PERCENT);
       }
-    }
+    };
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [sidebarWidthPercent, setSidebarWidthPercent])
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarWidthPercent, setSidebarWidthPercent]);
 
   // Clamp initial width on mount
   useEffect(() => {
     if (sidebarWidthPercent > MAX_SIDEBAR_WIDTH_PERCENT) {
-      setSidebarWidthPercent(MAX_SIDEBAR_WIDTH_PERCENT)
+      setSidebarWidthPercent(MAX_SIDEBAR_WIDTH_PERCENT);
     } else if (sidebarWidthPercent < MIN_SIDEBAR_WIDTH_PERCENT) {
-      setSidebarWidthPercent(MIN_SIDEBAR_WIDTH_PERCENT)
+      setSidebarWidthPercent(MIN_SIDEBAR_WIDTH_PERCENT);
     }
-  }, [sidebarWidthPercent, setSidebarWidthPercent])
+  }, [sidebarWidthPercent, setSidebarWidthPercent]);
 
-  const sidebarWidth = getSidebarWidth()
+  const sidebarWidth = getSidebarWidth();
 
   // Use default width during SSR to prevent hydration mismatch
   // Default to 256px (w-64) during SSR, then use calculated width after mount
-  const displayWidth = isMounted ? sidebarWidth : 256
+  const displayWidth = isMounted ? sidebarWidth : 256;
 
   return (
     <aside
@@ -162,9 +162,7 @@ const DashboardSidebar = ({}: DashboardSidebarProps) => {
           <Link
             href="/dashboard"
             className={`flex items-center rounded-md text-sm font-medium transition-colors ${
-              isIconOnly
-                ? 'justify-center px-2 py-2'
-                : 'gap-3 px-3 py-2'
+              isIconOnly ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
             } ${
               isActive('/dashboard')
                 ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
@@ -193,9 +191,7 @@ const DashboardSidebar = ({}: DashboardSidebarProps) => {
           <Link
             href="/transactions/new"
             className={`flex items-center rounded-md text-sm font-medium transition-colors ${
-              isIconOnly
-                ? 'justify-center px-2 py-2'
-                : 'gap-3 px-3 py-2'
+              isIconOnly ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
             } ${
               isActive('/transactions/new')
                 ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
@@ -223,9 +219,7 @@ const DashboardSidebar = ({}: DashboardSidebarProps) => {
           <Link
             href="/budgets"
             className={`flex items-center rounded-md text-sm font-medium transition-colors ${
-              isIconOnly
-                ? 'justify-center px-2 py-2'
-                : 'gap-3 px-3 py-2'
+              isIconOnly ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
             } ${
               isActive('/budgets')
                 ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
@@ -252,9 +246,7 @@ const DashboardSidebar = ({}: DashboardSidebarProps) => {
           <Link
             href="/profile"
             className={`flex items-center rounded-md text-sm font-medium transition-colors ${
-              isIconOnly
-                ? 'justify-center px-2 py-2'
-                : 'gap-3 px-3 py-2'
+              isIconOnly ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
             } ${
               isActive('/profile')
                 ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
@@ -287,15 +279,10 @@ const DashboardSidebar = ({}: DashboardSidebarProps) => {
           isIconOnly ? 'p-2' : 'p-4'
         }`}
       >
-        {isIconOnly ? (
-          <SignOutButton iconOnly />
-        ) : (
-          <SignOutButton />
-        )}
+        {isIconOnly ? <SignOutButton iconOnly /> : <SignOutButton />}
       </div>
     </aside>
-  )
-}
+  );
+};
 
-export default DashboardSidebar
-
+export default DashboardSidebar;
