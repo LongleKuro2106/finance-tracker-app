@@ -93,19 +93,26 @@ async function bootstrap() {
     }
   };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => {
+    void gracefulShutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void gracefulShutdown('SIGINT');
+  });
 
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    gracefulShutdown('unhandledRejection');
-  });
+  process.on(
+    'unhandledRejection',
+    (reason: unknown, promise: Promise<unknown>) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      void gracefulShutdown('unhandledRejection');
+    },
+  );
 
   // Handle uncaught exceptions
   process.on('uncaughtException', (error: Error) => {
     console.error('Uncaught Exception:', error);
-    gracefulShutdown('uncaughtException');
+    void gracefulShutdown('uncaughtException');
   });
 }
 void bootstrap();
