@@ -1,0 +1,84 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+dist
+build
+*.tsbuildinfo
+
+# Testing
+coverage
+.nyc_output
+test
+*.spec.ts
+*.e2e-spec.ts
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.staging.local
+!.env.example
+!.env.template
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Security
+*.pem
+*.key
+*.secret
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets/
+SECURITY_CHECKLIST.md
+
+# Prisma (keep schema, ignore generated)
+prisma/migrations/*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+*.backup
+
+# Logs
+logs
+*.log
+
+# Misc
+.editorconfig
+.prettierrc
+.eslintrc*
+nest-cli.json
+tsconfig.build.json
+

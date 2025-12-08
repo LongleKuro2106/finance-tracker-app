@@ -11,9 +11,18 @@ async function bootstrap() {
 
   // CORS configuration
   // Client runs on port 3000, server on port 3010
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim())
-    : ['http://localhost:3000']; // Default: localhost only
+  const allowedOrigins = (() => {
+    const origins = process.env.ALLOWED_ORIGINS;
+    if (!origins) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'ALLOWED_ORIGINS environment variable is required in production',
+        );
+      }
+      return ['http://localhost:3000']; // Default: localhost only (dev only)
+    }
+    return origins.split(',').map((origin) => origin.trim());
+  })();
 
   app.enableCors({
     origin: (
@@ -69,5 +78,34 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3010;
   const host = process.env.HOST ?? '0.0.0.0';
   await app.listen(port, host);
+
+  // Graceful shutdown handling
+  // Handle SIGTERM (Docker stop) and SIGINT (Ctrl+C)
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
+    try {
+      await app.close();
+      console.log('Application closed successfully');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during graceful shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('unhandledRejection');
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error: Error) => {
+    console.error('Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+  });
 }
 void bootstrap();

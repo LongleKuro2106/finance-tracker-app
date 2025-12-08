@@ -160,29 +160,54 @@ finance-tracker-app/
 
 ## 🚦 Getting Started
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL database
-- npm or yarn
+### Quick Start with Docker (Recommended)
 
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
+1. **Clone the repository**
    ```bash
-   cd client && npm install
-   cd ../server && npm install
+   git clone <repository-url>
+   cd finance-tracker-app
    ```
 
-3. Set up environment variables .env in both client and sever
+2. **Configure environment**
+   ```bash
+   cp .env.sample .env
+   # Edit .env with your values (see .env.sample for required variables)
+   ```
 
-4. Run database migrations:
+3. **Start services**
+   ```bash
+   docker-compose up --build
+   ```
+
+4. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3010
+
+### Local Development (Without Docker)
+
+1. **Prerequisites**
+   - Node.js 22.12.0+
+   - PostgreSQL 16+
+   - npm or yarn
+
+2. **Install dependencies**
+   ```bash
+   cd server && npm install
+   cd ../client && npm install
+   ```
+
+3. **Set up environment variables**
+   - Copy `.env.sample` to `.env` in `finance-tracker-app/` directory
+   - Configure database connection and secrets
+
+4. **Set up database**
    ```bash
    cd server
    npx prisma migrate dev
+   npx prisma db seed
    ```
 
-5. Start development servers:
+5. **Start development servers**
    ```bash
    # Terminal 1 - Backend (port 3010)
    cd server && npm run start:dev
@@ -190,6 +215,13 @@ finance-tracker-app/
    # Terminal 2 - Frontend (port 3000)
    cd client && npm run dev
    ```
+
+### Documentation
+
+- **[SETUP.md](../SETUP.md)** - Complete setup and configuration guide
+- **[Deploy.md](./Deploy.md)** - Production deployment tutorial
+- **[SECURITY.md](../SECURITY.md)** - Security best practices and secrets management
+- **[.env.sample](./.env.sample)** - Environment variables template
 
 ## 📚 Learning Objectives
 

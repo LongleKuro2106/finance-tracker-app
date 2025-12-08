@@ -17,9 +17,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return token;
     };
 
-    const jwtSecret: string = String(
-      process.env.JWT_SECRET || 'dev_jwt_secret',
-    );
+    const jwtSecret: string = (() => {
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(
+            'JWT_SECRET environment variable is required in production',
+          );
+        }
+        return 'dev_jwt_secret'; // Only for development
+      }
+      return secret;
+    })();
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
