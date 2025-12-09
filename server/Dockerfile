@@ -1,15 +1,19 @@
 # Multi-stage build for NestJS server
-FROM node:22.12.0-alpine AS base
+# Use Node.js 24.11.0 Alpine (smaller, more secure, fewer vulnerabilities)
+FROM node:24.11.0-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
 # Install build dependencies for native modules (bcrypt)
-RUN apk add --no-cache libc6-compat openssl python3 make g++
+# Update packages and clean cache to reduce vulnerabilities
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache libc6-compat openssl python3 make g++ && \
+    rm -rf /var/cache/apk/*
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit
 
 # Generate Prisma Client
 FROM deps AS prisma
@@ -33,8 +37,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nestjs
+# Create non-root user for security (best practice #3)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs && \
+    apk update && apk upgrade --no-cache && \
+    rm -rf /var/cache/apk/*
 
 # Copy package files for production dependency installation
 COPY --from=builder /app/package.json ./package.json
@@ -42,7 +49,10 @@ COPY --from=builder /app/package-lock.json* ./package-lock.json
 
 # Install only production dependencies (excludes devDependencies)
 # --ignore-scripts prevents postinstall scripts that might require dev dependencies
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Clean npm cache to reduce image size (best practice #10)
+RUN npm ci --omit=dev --ignore-scripts --prefer-offline --no-audit && \
+    npm cache clean --force && \
+    rm -rf /tmp/*
 
 # Copy native modules (bcrypt) from deps stage where they were built
 # bcrypt requires native bindings that are platform-specific

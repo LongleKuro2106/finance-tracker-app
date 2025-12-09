@@ -2,10 +2,11 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import BudgetsWrapper from '../../components/budgets/budgets-wrapper'
 import { getApiBaseUrl } from '@/lib/utils'
+import { ACCESS_TOKEN_COOKIE_NAME } from '@/lib/cookie-names'
 
 const BudgetsPage = async () => {
   const cookieStore = await cookies()
-  const accessToken = cookieStore.get('access_token')?.value
+  const accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
 
   // If no access token, redirect to login (middleware should have caught this, but double-check)
   if (!accessToken) {

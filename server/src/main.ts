@@ -50,7 +50,8 @@ async function bootstrap() {
       'Accept',
       'Origin',
     ],
-    exposedHeaders: ['Authorization'],
+    // Do not expose Authorization header - tokens are in HttpOnly cookies only
+    // exposedHeaders removed for security (prevents client-side JS access to tokens)
     maxAge: 86400, // 24 hours
   });
 
