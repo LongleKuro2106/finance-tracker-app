@@ -39,11 +39,12 @@ Finance Tracker is a full-stack web application that helps users manage their pe
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Next.js 14 (App Router), React, TypeScript, TailwindCSS
+- **Frontend:** Next.js 16 (App Router), React 18, TypeScript, TailwindCSS
 - **Backend:** NestJS, TypeScript, Prisma ORM
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL 16
 - **Authentication:** JWT with refresh tokens
 - **Security:** Helmet, CORS, Rate Limiting, Input Validation
+- **Containerization:** Docker & Docker Compose
 
 ## 🪝 Custom Hooks
 
@@ -155,86 +156,42 @@ finance-tracker-app/
 ├── server/          # NestJS backend API
 │   ├── src/         # Source code
 │   └── prisma/      # Database schema and migrations
-└── README.md        # This file
+├── docker-compose.yml  # Docker Compose configuration
+├── README.md        # This file
+└── INSTALLATION.md  # Installation guide
 ```
-
-## 🚦 Getting Started
-
-### Quick Start with Docker (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd finance-tracker-app
-   ```
-
-2. **Configure environment**
-   ```bash
-   cp .env.sample .env
-   # Edit .env with your values (see .env.sample for required variables)
-   ```
-
-3. **Start services**
-   ```bash
-   docker-compose up --build
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3010
-
-### Local Development (Without Docker)
-
-1. **Prerequisites**
-   - Node.js 22.12.0+
-   - PostgreSQL 16+
-   - npm or yarn
-
-2. **Install dependencies**
-   ```bash
-   cd server && npm install
-   cd ../client && npm install
-   ```
-
-3. **Set up environment variables**
-   - Copy `.env.sample` to `.env` in `finance-tracker-app/` directory
-   - Configure database connection and secrets
-
-4. **Set up database**
-   ```bash
-   cd server
-   npx prisma migrate dev
-   npx prisma db seed
-   ```
-
-5. **Start development servers**
-   ```bash
-   # Terminal 1 - Backend (port 3010)
-   cd server && npm run start:dev
-
-   # Terminal 2 - Frontend (port 3000)
-   cd client && npm run dev
-   ```
-
-### Documentation
-
-- **[SETUP.md](../SETUP.md)** - Complete setup and configuration guide
-- **[Deploy.md](./Deploy.md)** - Production deployment tutorial
-- **[SECURITY.md](../SECURITY.md)** - Security best practices and secrets management
-- **[.env.sample](./.env.sample)** - Environment variables template
 
 ## 📚 Learning Objectives
 
 This project serves as a comprehensive learning exercise covering:
 
-- **Next.js:** App Router, Server Components, API Routes, Middleware
+- **Next.js:** App Router, Server Components, API Routes, Proxy
 - **React:** Custom hooks, memoization, lazy loading, performance optimization
 - **NestJS:** Modules, Controllers, Services, Guards, DTOs, Dependency Injection
-- **System Architecture:** RESTful API design, separation of concerns, microservices patterns
+- **System Architecture:** RESTful API design, separation of concerns, monolith patterns
 - **Security:** Authentication, authorization, input validation, XSS/CSRF prevention, secure headers
 - **Performance:** Request deduplication, caching strategies, component optimization
 - **Database:** Prisma ORM, migrations, indexing, query optimization, UUID implementation
-- **Deployment:** Production-ready configurations, environment management
+- **Deployment:** Docker containerization, production-ready configurations, environment management
+
+## 📖 Documentation
+
+- **[INSTALLATION.md](./INSTALLATION.md)** - Step-by-step installation guide (npm and Docker)
+
+## 🚦 Quick Start
+
+For detailed installation instructions, see [INSTALLATION.md](./INSTALLATION.md).
+
+**Quick overview:**
+1. Install dependencies (`npm install` in both `client/` and `server/`)
+2. Set up environment variables (copy `.env.sample` to `.env`)
+3. Set up database (`npx prisma migrate dev` and `npx prisma db seed`)
+4. Start development servers (`npm run start:dev` and `npm run dev`)
+
+Or use Docker:
+```bash
+docker-compose up --build
+```
 
 ## 📝 License
 
