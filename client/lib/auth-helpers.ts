@@ -1,18 +1,22 @@
 import { cookies } from 'next/headers'
+import {
+  ACCESS_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from './cookie-names'
 
 /**
  * Clear both access and refresh tokens
  */
 export const clearAuthCookies = async () => {
   const cookieStore = await cookies()
-  cookieStore.set('access_token', '', {
+  cookieStore.set(ACCESS_TOKEN_COOKIE_NAME, '', {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 0,
   })
-  cookieStore.set('refresh_token', '', {
+  cookieStore.set(REFRESH_TOKEN_COOKIE_NAME, '', {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -26,7 +30,7 @@ export const clearAuthCookies = async () => {
  */
 export const getAccessToken = async (): Promise<string | undefined> => {
   const cookieStore = await cookies()
-  return cookieStore.get('access_token')?.value
+  return cookieStore.get(ACCESS_TOKEN_COOKIE_NAME)?.value
 }
 
 /**
@@ -34,6 +38,6 @@ export const getAccessToken = async (): Promise<string | undefined> => {
  */
 export const getRefreshToken = async (): Promise<string | undefined> => {
   const cookieStore = await cookies()
-  return cookieStore.get('refresh_token')?.value
+  return cookieStore.get(REFRESH_TOKEN_COOKIE_NAME)?.value
 }
 

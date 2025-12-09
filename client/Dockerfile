@@ -1,15 +1,19 @@
 # Multi-stage build for Next.js client
-FROM node:22.12.0-alpine AS base
+# Use Node.js 24.11.0 Alpine (smaller, more secure, fewer vulnerabilities)
+FROM node:24.11.0-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Update packages and clean cache to reduce vulnerabilities
+RUN apk update && apk upgrade --no-cache && \
+  apk add --no-cache libc6-compat && \
+  rm -rf /var/cache/apk/*
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
 # Install all dependencies (including dev) for build stage
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -36,8 +40,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create non-root user for security (best practice #3)
+# Update packages and clean cache to reduce vulnerabilities
+RUN addgroup --system --gid 1001 nodejs && \
+  adduser --system --uid 1001 nextjs && \
+  apk update && apk upgrade --no-cache && \
+  rm -rf /var/cache/apk/*
 
 # Copy necessary files from standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

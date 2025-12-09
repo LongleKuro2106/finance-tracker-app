@@ -1,6 +1,10 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
+import {
+  ACCESS_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from '@/lib/cookie-names'
 
 export const POST = async (request: Request) => {
   try {
@@ -71,7 +75,7 @@ export const POST = async (request: Request) => {
     // Note: secure flag should be true only with HTTPS
     // For local network testing, set SECURE_COOKIES=false
     const isSecure = process.env.SECURE_COOKIES !== 'false' && process.env.NODE_ENV === 'production'
-    cookieStore.set('access_token', accessToken, {
+    cookieStore.set(ACCESS_TOKEN_COOKIE_NAME, accessToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isSecure,
@@ -80,7 +84,7 @@ export const POST = async (request: Request) => {
     })
 
     // Store refresh token (7 days expiry)
-    cookieStore.set('refresh_token', refreshToken, {
+    cookieStore.set(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isSecure,

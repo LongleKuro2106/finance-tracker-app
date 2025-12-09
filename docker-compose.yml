@@ -3,16 +3,18 @@ services:
     image: postgres:16-alpine
     container_name: finance-tracker-db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-finance_tracker}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,22 +30,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${SERVER_PORT:-3010}
-      HOST: ${SERVER_HOST:-0.0.0.0}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-finance_tracker}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-finance_tracker}
-      POSTGRES_HOST: postgres
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${SERVER_PORT}
+      HOST: ${SERVER_HOST}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
       JWT_SECRET: ${JWT_SECRET}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
-      # Optional: Rate limiting and other configs
-      THROTTLE_TTL: ${THROTTLE_TTL:-60}
-      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-10}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      THROTTLE_TTL: ${THROTTLE_TTL}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT}
     ports:
-      - "${SERVER_PORT:-3010}:3010"
+      - "${SERVER_PORT}:3010"
     networks:
       - finance-tracker-network
     healthcheck:
@@ -58,20 +61,24 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        # Use Docker service name for internal communication
-        # Override with NEXT_PUBLIC_API_BASE_URL env var if needed
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://server:3010}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     container_name: finance-tracker-client
     restart: unless-stopped
     depends_on:
       - server
+    env_file:
+      - .env
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      SECURE_COOKIES: ${SECURE_COOKIES:-false}
-      PORT: ${CLIENT_PORT:-3000}
-      HOSTNAME: ${CLIENT_HOST:-0.0.0.0}
+      NODE_ENV: ${NODE_ENV}
+      SECURE_COOKIES: ${SECURE_COOKIES}
+      PORT: ${CLIENT_PORT}
+      HOSTNAME: ${CLIENT_HOST}
+      # Cookie names (optional - defaults to 'access_token' and 'refresh_token' for dev)
+      # For production, use obscure names like 'at' and 'rt' for better security appearance
+      ACCESS_TOKEN_COOKIE_NAME: ${ACCESS_TOKEN_COOKIE_NAME:-}
+      REFRESH_TOKEN_COOKIE_NAME: ${REFRESH_TOKEN_COOKIE_NAME:-}
     ports:
-      - "${CLIENT_PORT:-3000}:3000"
+      - "${CLIENT_PORT}:3000"
     networks:
       - finance-tracker-network
     healthcheck:

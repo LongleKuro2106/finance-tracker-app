@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isTokenExpiringSoon } from './lib/auth-utils'
+import {
+  ACCESS_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
+} from './lib/cookie-names'
 
 export const config = {
   matcher: [
@@ -36,8 +40,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/profile')
 
   if (isProtectedRoute) {
-    const accessToken = request.cookies.get('access_token')?.value
-    const refreshToken = request.cookies.get('refresh_token')?.value
+    const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)?.value
+    const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value
 
     // If no tokens, redirect to login
     if (!accessToken || !refreshToken) {
@@ -82,8 +86,8 @@ export async function proxy(request: NextRequest) {
             const url = new URL('/login', request.url)
             const redirectResponse = NextResponse.redirect(url)
             // Clear cookies
-            redirectResponse.cookies.delete('access_token')
-            redirectResponse.cookies.delete('refresh_token')
+            redirectResponse.cookies.delete(ACCESS_TOKEN_COOKIE_NAME)
+            redirectResponse.cookies.delete(REFRESH_TOKEN_COOKIE_NAME)
             return redirectResponse
           }
           // For other errors, let request proceed (might be temporary)
@@ -116,8 +120,8 @@ export async function proxy(request: NextRequest) {
         // Refresh failed, redirect to login
         const url = new URL('/login', request.url)
         const redirectResponse = NextResponse.redirect(url)
-        redirectResponse.cookies.delete('access_token')
-        redirectResponse.cookies.delete('refresh_token')
+        redirectResponse.cookies.delete(ACCESS_TOKEN_COOKIE_NAME)
+        redirectResponse.cookies.delete(REFRESH_TOKEN_COOKIE_NAME)
         return redirectResponse
       }
     }
