@@ -5,7 +5,7 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
+  Put,
   Post,
   Query,
   Req,
@@ -28,7 +28,7 @@ import { PreserveBudgetDto } from './dto/preserve-budget.dto';
     ttl: 60_000,
   },
 }) // 100 requests per minute in production, unlimited in dev
-@Controller('budgets')
+@Controller('v1/budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
@@ -80,7 +80,7 @@ export class BudgetsController {
     );
   }
 
-  @Patch(':month/:year')
+  @Put(':month/:year')
   update(
     @Req() req: { user: { userId: string } },
     @Param('month') month: string,
@@ -123,7 +123,7 @@ export class BudgetsController {
     );
   }
 
-  @Patch(':month/:year/toggle-preserve')
+  @Put(':month/:year/preserve')
   togglePreserve(
     @Req() req: { user: { userId: string } },
     @Param('month') month: string,

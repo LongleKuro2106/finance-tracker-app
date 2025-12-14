@@ -1,4 +1,4 @@
-import { secureApiRequest, apiGet, apiPost, apiPatch, apiDelete, ApiError } from '@/lib/api-client'
+import { secureApiRequest, apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api-client'
 
 // Mock fetch globally
 global.fetch = jest.fn()
@@ -205,19 +205,19 @@ describe('api-client', () => {
     })
   })
 
-  describe('apiPatch', () => {
-    it('should make PATCH request with body', async () => {
+  describe('apiPut', () => {
+    it('should make PUT request with body', async () => {
       const body = { name: 'Updated' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ id: 1 }),
       })
 
-      await apiPatch('/api/test', body)
+      await apiPut('/api/test', body)
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/test',
         expect.objectContaining({
-          method: 'PATCH',
+          method: 'PUT',
           body: JSON.stringify(body),
         }),
       )

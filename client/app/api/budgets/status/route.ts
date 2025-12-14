@@ -26,7 +26,7 @@ export const GET = async (request: NextRequest) => {
 
     const apiBase = getApiBaseUrl()
     const res = await fetch(
-      `${apiBase}/budgets/status?month=${month}&year=${year}`,
+      `${apiBase}/v1/budgets/status?month=${month}&year=${year}`,
       {
         method: 'GET',
         headers: {

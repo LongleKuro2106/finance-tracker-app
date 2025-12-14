@@ -43,7 +43,7 @@ export async function createTestUser(
   const signupResponse: Response = await request(
     app.getHttpServer() as unknown as string,
   )
-    .post('/auth/signup')
+    .post('/v1/users/signup')
     .send(userData);
 
   // If signup succeeded (201), use those tokens
@@ -59,7 +59,7 @@ export async function createTestUser(
   const loginResponse: Response = await request(
     app.getHttpServer() as unknown as string,
   )
-    .post('/auth/login')
+    .post('/v1/users/login')
     .send({
       usernameOrEmail: userData.username,
       password: userData.password,
@@ -89,7 +89,7 @@ export async function loginTestUser(
   const response: Response = await request(
     app.getHttpServer() as unknown as string,
   )
-    .post('/auth/login')
+    .post('/v1/users/login')
     .send({ usernameOrEmail, password });
 
   if (response.status !== 200 && response.status !== 201) {
@@ -171,7 +171,7 @@ export function generateTestUser(prefix = 'test'): TestUser {
  */
 export function authenticatedRequest(
   app: INestApplication,
-  method: 'get' | 'post' | 'patch' | 'delete',
+  method: 'get' | 'post' | 'put' | 'delete',
   url: string,
   accessToken: string,
 ) {

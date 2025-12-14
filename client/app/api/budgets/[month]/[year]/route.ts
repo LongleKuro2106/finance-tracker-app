@@ -19,7 +19,7 @@ export const GET = async (
     const { month, year } = await params
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets/${month}/${year}`, {
+    const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -63,7 +63,7 @@ export const GET = async (
   }
 }
 
-export const PATCH = async (
+export const PUT = async (
   request: NextRequest,
   { params }: { params: Promise<{ month: string; year: string }> },
 ) => {
@@ -91,8 +91,8 @@ export const PATCH = async (
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets/${month}/${year}`, {
-      method: 'PATCH',
+    const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export const DELETE = async (
     const { month, year } = await params
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets/${month}/${year}`, {
+    const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,

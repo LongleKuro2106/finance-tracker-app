@@ -47,10 +47,10 @@ describe('AuthController (e2e)', () => {
     await app.close();
   });
 
-  describe('POST /auth/signup', () => {
+  describe('POST /v1/users/signup', () => {
     it('should successfully sign up a new user', async () => {
       const response = await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: testUser.username,
           email: testUser.email,
@@ -78,7 +78,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject signup with invalid email', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: testUser.username,
           email: 'invalid-email',
@@ -90,7 +90,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject signup with weak password', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: testUser.username,
           email: testUser.email,
@@ -102,7 +102,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject signup with mismatched passwords', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: testUser.username,
           email: testUser.email,
@@ -121,7 +121,7 @@ describe('AuthController (e2e)', () => {
       });
 
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: testUser.username,
           email: 'different@test.com',
@@ -140,7 +140,7 @@ describe('AuthController (e2e)', () => {
       });
 
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: 'different_user',
           email: testUser.email,
@@ -152,7 +152,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject signup with short username', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: 'ab',
           email: testUser.email,
@@ -164,7 +164,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject signup with invalid username characters', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/signup')
+        .post('/v1/users/signup')
         .send({
           username: 'test user',
           email: testUser.email,
@@ -175,7 +175,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('POST /auth/login', () => {
+  describe('POST /v1/users/login', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -187,7 +187,7 @@ describe('AuthController (e2e)', () => {
 
     it('should successfully login with username', async () => {
       const response = await request(app.getHttpServer() as unknown as string)
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: testUser.username,
           password: testUser.password,
@@ -200,7 +200,7 @@ describe('AuthController (e2e)', () => {
 
     it('should successfully login with email', async () => {
       const response = await request(app.getHttpServer() as unknown as string)
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: testUser.email,
           password: testUser.password,
@@ -213,7 +213,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject login with incorrect password', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: testUser.username,
           password: 'WrongPassword123!@#',
@@ -223,7 +223,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject login with non-existent user', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: 'nonexistent',
           password: testUser.password,
@@ -233,7 +233,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject login with empty credentials', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: '',
           password: '',
@@ -242,7 +242,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('POST /auth/refresh', () => {
+  describe('POST /v1/users/refresh', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -256,7 +256,7 @@ describe('AuthController (e2e)', () => {
       const originalRefreshToken = authTokens.refreshToken;
 
       const response = await request(app.getHttpServer() as unknown as string)
-        .post('/auth/refresh')
+        .post('/v1/users/refresh')
         .send({
           refreshToken: originalRefreshToken,
         })
@@ -278,7 +278,7 @@ describe('AuthController (e2e)', () => {
 
       // Verify old refresh token is invalidated by trying to use it again
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/refresh')
+        .post('/v1/users/refresh')
         .send({
           refreshToken: originalRefreshToken,
         })
@@ -287,7 +287,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject refresh with invalid token', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/refresh')
+        .post('/v1/users/refresh')
         .send({
           refreshToken: 'invalid-token',
         })
@@ -298,7 +298,7 @@ describe('AuthController (e2e)', () => {
       // This would require mocking time or using an expired token
       // For now, we test with invalid token format
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/refresh')
+        .post('/v1/users/refresh')
         .send({
           refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid',
         })
@@ -306,7 +306,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('GET /auth/me', () => {
+  describe('GET /v1/users/me', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -320,7 +320,7 @@ describe('AuthController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/auth/me',
+        '/v1/users/me',
         authTokens.accessToken,
       ).expect(200);
 
@@ -332,7 +332,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject request without token', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .get('/auth/me')
+        .get('/v1/users/me')
         .expect(401);
     });
 
@@ -340,13 +340,13 @@ describe('AuthController (e2e)', () => {
       await authenticatedRequest(
         app,
         'get',
-        '/auth/me',
+        '/v1/users/me',
         'invalid-token',
       ).expect(401);
     });
   });
 
-  describe('PATCH /auth/me', () => {
+  describe('PUT /v1/users/me', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -360,8 +360,8 @@ describe('AuthController (e2e)', () => {
       const newEmail = 'newemail@test.com';
       const response = await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -388,8 +388,8 @@ describe('AuthController (e2e)', () => {
       const newPassword = 'NewPassword123!@#';
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -403,7 +403,7 @@ describe('AuthController (e2e)', () => {
       const loginResponse = await request(
         app.getHttpServer() as unknown as string,
       )
-        .post('/auth/login')
+        .post('/v1/users/login')
         .send({
           usernameOrEmail: testUser.username,
           password: newPassword,
@@ -415,8 +415,8 @@ describe('AuthController (e2e)', () => {
     it('should reject email update without old password', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -428,8 +428,8 @@ describe('AuthController (e2e)', () => {
     it('should reject email update with incorrect old password', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -442,8 +442,8 @@ describe('AuthController (e2e)', () => {
     it('should reject password update without confirm password', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -456,8 +456,8 @@ describe('AuthController (e2e)', () => {
     it('should reject password update with mismatched confirm password', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -471,8 +471,8 @@ describe('AuthController (e2e)', () => {
     it('should reject password update with incorrect old password', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/auth/me',
+        'put',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -484,7 +484,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('DELETE /auth/me', () => {
+  describe('DELETE /v1/users/me', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -498,7 +498,7 @@ describe('AuthController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/auth/me',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -517,7 +517,7 @@ describe('AuthController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/auth/me',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({
@@ -536,7 +536,7 @@ describe('AuthController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/auth/me',
+        '/v1/users/me',
         authTokens.accessToken,
       )
         .send({})
@@ -545,7 +545,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject deletion without token', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .delete('/auth/me')
+        .delete('/v1/users/me')
         .send({
           password: testUser.password,
         })
@@ -553,7 +553,7 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('POST /auth/logout', () => {
+  describe('POST /v1/users/logout', () => {
     beforeEach(async () => {
       authTokens = await createTestUser(app, {
         username: testUser.username,
@@ -567,7 +567,7 @@ describe('AuthController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/auth/logout',
+        '/v1/users/logout',
         authTokens.accessToken,
       )
         .send({
@@ -578,7 +578,7 @@ describe('AuthController (e2e)', () => {
 
     it('should reject logout without token', async () => {
       await request(app.getHttpServer() as unknown as string)
-        .post('/auth/logout')
+        .post('/v1/users/logout')
         .expect(401);
     });
   });

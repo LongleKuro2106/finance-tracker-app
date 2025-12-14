@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { Budget } from '@/components/budgets/budget-card'
-import { apiGet, apiDelete, apiPost, apiPatch } from '@/lib/api-client'
+import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api-client'
 import { invalidateApiCache } from './use-api'
 
 interface UseBudgetsResult {
@@ -66,7 +66,7 @@ export function useBudgets(): UseBudgetsResult {
 
   const togglePreserve = useCallback(
     async (month: number, year: number) => {
-      await apiPatch(`/api/budgets/${month}/${year}/toggle-preserve`, {})
+      await apiPut(`/api/budgets/${month}/${year}/preserve`, {})
       invalidateApiCache('/api/budgets')
       await loadBudgets()
     },

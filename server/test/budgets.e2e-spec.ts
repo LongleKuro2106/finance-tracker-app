@@ -72,7 +72,7 @@ describe('BudgetsController (e2e)', () => {
     await app.close();
   });
 
-  describe('POST /budgets', () => {
+  describe('POST /v1/budgets', () => {
     it('should create a budget', async () => {
       const budgetData = {
         month: 1,
@@ -83,7 +83,7 @@ describe('BudgetsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send(budgetData)
@@ -112,7 +112,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -127,7 +127,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -142,7 +142,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -157,7 +157,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -172,7 +172,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -185,7 +185,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       )
         .send({
@@ -197,19 +197,19 @@ describe('BudgetsController (e2e)', () => {
     });
   });
 
-  describe('GET /budgets', () => {
+  describe('GET /v1/budgets', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
 
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 2, year: 2027, amount: 1200 });
     });
@@ -218,7 +218,7 @@ describe('BudgetsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).expect(200);
 
@@ -239,14 +239,14 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         otherTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 5000 });
 
       const response = await authenticatedRequest(
         app,
         'get',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).expect(200);
 
@@ -256,12 +256,12 @@ describe('BudgetsController (e2e)', () => {
     });
   });
 
-  describe('GET /budgets/:month/:year', () => {
+  describe('GET /v1/budgets/:month/:year', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
     });
@@ -270,7 +270,7 @@ describe('BudgetsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/budgets/1/2027',
+        '/v1/budgets/1/2027',
         authTokens.accessToken,
       ).expect(200);
 
@@ -284,18 +284,18 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'get',
-        '/budgets/12/2027',
+        '/v1/budgets/12/2027',
         authTokens.accessToken,
       ).expect(404);
     });
   });
 
-  describe('PATCH /budgets/:month/:year', () => {
+  describe('PUT /v1/budgets/:month/:year', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
     });
@@ -303,8 +303,8 @@ describe('BudgetsController (e2e)', () => {
     it('should update budget amount', async () => {
       const response = await authenticatedRequest(
         app,
-        'patch',
-        '/budgets/1/2027',
+        'put',
+        '/v1/budgets/1/2027',
         authTokens.accessToken,
       )
         .send({ amount: 1500 })
@@ -317,8 +317,8 @@ describe('BudgetsController (e2e)', () => {
     it('should reject update of non-existent budget', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/budgets/12/2027',
+        'put',
+        '/v1/budgets/12/2027',
         authTokens.accessToken,
       )
         .send({ amount: 1500 })
@@ -326,12 +326,12 @@ describe('BudgetsController (e2e)', () => {
     });
   });
 
-  describe('DELETE /budgets/:month/:year', () => {
+  describe('DELETE /v1/budgets/:month/:year', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
     });
@@ -340,7 +340,7 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/budgets/1/2027',
+        '/v1/budgets/1/2027',
         authTokens.accessToken,
       ).expect(200);
 
@@ -361,18 +361,18 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/budgets/12/2027',
+        '/v1/budgets/12/2027',
         authTokens.accessToken,
       ).expect(404);
     });
   });
 
-  describe('GET /budgets/status', () => {
+  describe('GET /v1/budgets/status', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
 
@@ -404,7 +404,7 @@ describe('BudgetsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/budgets/status?month=1&year=2027',
+        '/v1/budgets/status?month=1&year=2027',
         authTokens.accessToken,
       ).expect(200);
 
@@ -421,18 +421,18 @@ describe('BudgetsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'get',
-        '/budgets/status',
+        '/v1/budgets/status',
         authTokens.accessToken,
       ).expect(400); // Controller validates and returns 400 for missing params
     });
   });
 
-  describe('POST /budgets/:month/:year/preserve', () => {
+  describe('POST /v1/budgets/:month/:year/preserve', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
     });
@@ -441,7 +441,7 @@ describe('BudgetsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/budgets/1/2027/preserve',
+        '/v1/budgets/1/2027/preserve',
         authTokens.accessToken,
       )
         .send({ preserve: true })
@@ -456,12 +456,12 @@ describe('BudgetsController (e2e)', () => {
     });
   });
 
-  describe('PATCH /budgets/:month/:year/toggle-preserve', () => {
+  describe('PUT /v1/budgets/:month/:year/preserve', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/budgets',
+        '/v1/budgets',
         authTokens.accessToken,
       ).send({ month: 1, year: 2027, amount: 1000 });
     });
@@ -469,8 +469,8 @@ describe('BudgetsController (e2e)', () => {
     it('should toggle preserve status', async () => {
       const firstResponse = await authenticatedRequest(
         app,
-        'patch',
-        '/budgets/1/2027/toggle-preserve',
+        'put',
+        '/v1/budgets/1/2027/preserve',
         authTokens.accessToken,
       ).expect(200);
 
@@ -481,8 +481,8 @@ describe('BudgetsController (e2e)', () => {
 
       const secondResponse = await authenticatedRequest(
         app,
-        'patch',
-        '/budgets/1/2027/toggle-preserve',
+        'put',
+        '/v1/budgets/1/2027/preserve',
         authTokens.accessToken,
       ).expect(200);
 

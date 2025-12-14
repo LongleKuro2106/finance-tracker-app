@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import CategorySelector from './category-selector'
-import { apiPatch } from '@/lib/api-client'
+import { apiPut } from '@/lib/api-client'
 import type { Transaction } from '@/lib/utils'
 
 const transactionSchema = z.object({
@@ -85,7 +85,7 @@ const EditTransactionForm = ({
     setError(null)
 
     try {
-      await apiPatch(`/api/transactions/${transaction.id}`, {
+      await apiPut(`/api/transactions/${transaction.id}`, {
         amount: values.amount,
         date: values.date,
         type: values.type,

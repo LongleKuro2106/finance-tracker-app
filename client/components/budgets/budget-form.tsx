@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import type { Budget } from './budget-card'
-import { apiPost, apiPatch } from '@/lib/api-client'
+import { apiPost, apiPut } from '@/lib/api-client'
 
 const budgetSchema = z.object({
   month: z.number().min(1).max(12),
@@ -64,7 +64,7 @@ const BudgetForm = ({
         : '/api/budgets'
 
       if (budget) {
-        await apiPatch(url, {
+        await apiPut(url, {
           month: values.month,
           year: values.year,
           amount: values.amount,

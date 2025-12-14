@@ -25,7 +25,7 @@ export const GET = async (request: NextRequest) => {
     if (endDate) queryParams.set('endDate', endDate)
 
     const res = await fetch(
-      `${apiBase}/analytics/monthly?${queryParams.toString()}`,
+      `${apiBase}/v1/analytics/monthly?${queryParams.toString()}`,
       {
         method: 'GET',
         headers: {

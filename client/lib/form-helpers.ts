@@ -13,7 +13,7 @@ import { secureApiRequest, type ApiError } from './api-client'
 
 export interface UseFormSubmitOptions<T> {
   url: string
-  method?: 'POST' | 'PATCH' | 'PUT'
+  method?: 'POST' | 'PUT' | 'DELETE'
   onSuccess?: (data: T) => void
   onError?: (error: string) => void
   transformData?: (values: unknown) => unknown

@@ -24,7 +24,7 @@ export const GET = async (request: NextRequest) => {
     queryParams.set('limit', limit)
 
     const res = await fetch(
-      `${apiBase}/transactions?${queryParams.toString()}`,
+      `${apiBase}/v1/transactions?${queryParams.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -92,7 +92,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/transactions`, {
+    const res = await fetch(`${apiBase}/v1/transactions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

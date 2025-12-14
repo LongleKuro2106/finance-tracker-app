@@ -103,7 +103,7 @@ describe('auth-utils', () => {
 
       expect(result).toEqual(mockTokens)
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3010/auth/refresh',
+        'http://localhost:3010/v1/users/refresh',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

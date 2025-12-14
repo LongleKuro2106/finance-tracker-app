@@ -37,7 +37,7 @@ function getRequestKey(
 export async function secureApiRequest<T>(
   url: string,
   options: {
-    method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
     body?: unknown
     headers?: Record<string, string>
     skipDeduplication?: boolean // Allow bypassing deduplication for mutations
@@ -166,13 +166,13 @@ export async function apiPost<T>(
 }
 
 /**
- * PATCH request helper
+ * PUT request helper
  */
-export async function apiPatch<T>(
+export async function apiPut<T>(
   url: string,
   body: unknown,
 ): Promise<T> {
-  return secureApiRequest<T>(url, { method: 'PATCH', body })
+  return secureApiRequest<T>(url, { method: 'PUT', body })
 }
 
 /**

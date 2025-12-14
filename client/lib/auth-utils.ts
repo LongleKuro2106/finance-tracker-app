@@ -13,7 +13,7 @@ export const refreshAccessToken = async (
 ): Promise<{ accessToken: string; refreshToken: string } | null> => {
   try {
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/auth/refresh`, {
+    const res = await fetch(`${apiBase}/v1/users/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),

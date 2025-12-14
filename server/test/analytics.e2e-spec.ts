@@ -53,13 +53,13 @@ describe('AnalyticsController (e2e)', () => {
     await app.close();
   });
 
-  describe('GET /analytics/overview', () => {
+  describe('GET /v1/analytics/overview', () => {
     beforeEach(async () => {
       // Create income transactions
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 1000,
@@ -70,7 +70,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 500,
@@ -82,7 +82,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 200,
@@ -93,7 +93,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 150,
@@ -106,7 +106,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/overview',
+        '/v1/analytics/overview',
         authTokens.accessToken,
       ).expect(200);
 
@@ -128,7 +128,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/overview',
+        '/v1/analytics/overview',
         authTokens.accessToken,
       ).expect(200);
 
@@ -150,7 +150,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/overview?startDate=2024-01-01&endDate=2024-01-15',
+        '/v1/analytics/overview?startDate=2024-01-01&endDate=2024-01-15',
         authTokens.accessToken,
       ).expect(200);
 
@@ -170,7 +170,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         otherTokens.accessToken,
       ).send({
         amount: 9999,
@@ -181,7 +181,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/overview',
+        '/v1/analytics/overview',
         authTokens.accessToken,
       ).expect(200);
 
@@ -196,13 +196,13 @@ describe('AnalyticsController (e2e)', () => {
     });
   });
 
-  describe('GET /analytics/monthly', () => {
+  describe('GET /v1/analytics/monthly', () => {
     beforeEach(async () => {
       // Create transactions for different months
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 1000,
@@ -213,7 +213,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 500,
@@ -224,7 +224,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 200,
@@ -238,7 +238,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/monthly?startDate=2024-01-01&endDate=2024-12-31',
+        '/v1/analytics/monthly?startDate=2024-01-01&endDate=2024-12-31',
         authTokens.accessToken,
       ).expect(200);
 
@@ -263,7 +263,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/monthly?months=6',
+        '/v1/analytics/monthly?months=6',
         authTokens.accessToken,
       ).expect(200);
 
@@ -275,7 +275,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/monthly?startDate=2024-01-01&endDate=2024-01-31',
+        '/v1/analytics/monthly?startDate=2024-01-01&endDate=2024-01-31',
         authTokens.accessToken,
       ).expect(200);
 
@@ -283,12 +283,12 @@ describe('AnalyticsController (e2e)', () => {
     });
   });
 
-  describe('GET /analytics/categories', () => {
+  describe('GET /v1/analytics/categories', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 100,
@@ -300,7 +300,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 50,
@@ -312,7 +312,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 200,
@@ -325,7 +325,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/categories',
+        '/v1/analytics/categories',
         authTokens.accessToken,
       ).expect(200);
 
@@ -351,7 +351,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/categories?startDate=2024-01-01&endDate=2024-01-31',
+        '/v1/analytics/categories?startDate=2024-01-01&endDate=2024-01-31',
         authTokens.accessToken,
       ).expect(200);
 
@@ -370,7 +370,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         otherTokens.accessToken,
       ).send({
         amount: 9999,
@@ -382,7 +382,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/categories',
+        '/v1/analytics/categories',
         authTokens.accessToken,
       ).expect(200);
 
@@ -404,13 +404,13 @@ describe('AnalyticsController (e2e)', () => {
     });
   });
 
-  describe('GET /analytics/daily', () => {
+  describe('GET /v1/analytics/daily', () => {
     beforeEach(async () => {
       // Create transactions for different days in January 2024
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 50,
@@ -421,7 +421,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 75,
@@ -432,7 +432,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 100,
@@ -445,7 +445,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/daily',
+        '/v1/analytics/daily',
         authTokens.accessToken,
       ).expect(200);
 
@@ -470,7 +470,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/daily?year=2024&month=1',
+        '/v1/analytics/daily?year=2024&month=1',
         authTokens.accessToken,
       ).expect(200);
 
@@ -484,7 +484,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/daily?year=2024&month=1',
+        '/v1/analytics/daily?year=2024&month=1',
         authTokens.accessToken,
       ).expect(200);
 
@@ -516,7 +516,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         otherTokens.accessToken,
       ).send({
         amount: 9999,
@@ -527,7 +527,7 @@ describe('AnalyticsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/analytics/daily?year=2024&month=1',
+        '/v1/analytics/daily?year=2024&month=1',
         authTokens.accessToken,
       ).expect(200);
 
@@ -550,7 +550,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'get',
-        '/analytics/overview',
+        '/v1/analytics/overview',
         'invalid-token',
       ).expect(401);
     });
@@ -559,7 +559,7 @@ describe('AnalyticsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'get',
-        '/analytics/monthly',
+        '/v1/analytics/monthly',
         'invalid-token',
       ).expect(401);
     });

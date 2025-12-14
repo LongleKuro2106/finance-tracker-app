@@ -14,7 +14,7 @@ export const GET = async () => {
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets`, {
+    const res = await fetch(`${apiBase}/v1/budgets`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -80,7 +80,7 @@ export const POST = async (request: NextRequest) => {
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets`, {
+    const res = await fetch(`${apiBase}/v1/budgets`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
