@@ -13,9 +13,9 @@ const ProfilePage = async () => {
     redirect('/login')
   }
 
-  // Call backend /auth/me endpoint to validate token and get user info
+  // Call backend /v1/users/me endpoint to validate token and get user info
   const apiBase = getApiBaseUrl()
-  const res = await fetch(`${apiBase}/auth/me`, {
+  const res = await fetch(`${apiBase}/v1/users/me`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${accessToken}`,

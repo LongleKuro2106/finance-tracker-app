@@ -30,7 +30,7 @@ export const POST = async (
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets/${month}/${year}/preserve`, {
+    const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}/preserve`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

@@ -75,7 +75,7 @@ describe('TransactionsController (e2e)', () => {
     await app.close();
   });
 
-  describe('POST /transactions', () => {
+  describe('POST /v1/transactions', () => {
     it('should create an expense transaction', async () => {
       const transactionData = {
         amount: 50.99,
@@ -88,7 +88,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -119,7 +119,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -140,7 +140,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -159,7 +159,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -176,7 +176,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -184,7 +184,7 @@ describe('TransactionsController (e2e)', () => {
     });
 
     it('should reject transaction without authentication', async () => {
-      await authenticatedRequest(app, 'post', '/transactions', 'invalid-token')
+      await authenticatedRequest(app, 'post', '/v1/transactions', 'invalid-token')
         .send({
           amount: 50,
           date: '2024-01-15',
@@ -204,7 +204,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       )
         .send(transactionData)
@@ -216,13 +216,13 @@ describe('TransactionsController (e2e)', () => {
     });
   });
 
-  describe('GET /transactions', () => {
+  describe('GET /v1/transactions', () => {
     beforeEach(async () => {
       // Create some test transactions
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 100,
@@ -233,7 +233,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 50,
@@ -244,7 +244,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 25,
@@ -257,7 +257,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).expect(200);
 
@@ -272,7 +272,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/transactions?limit=2',
+        '/v1/transactions?limit=2',
         authTokens.accessToken,
       ).expect(200);
 
@@ -284,7 +284,7 @@ describe('TransactionsController (e2e)', () => {
       const firstPage = await authenticatedRequest(
         app,
         'get',
-        '/transactions?limit=2',
+        '/v1/transactions?limit=2',
         authTokens.accessToken,
       ).expect(200);
 
@@ -293,7 +293,7 @@ describe('TransactionsController (e2e)', () => {
         const secondPage = await authenticatedRequest(
           app,
           'get',
-          `/transactions?cursor=${firstPageBody.nextCursor}&limit=2`,
+          `/v1/transactions?cursor=${firstPageBody.nextCursor}&limit=2`,
           authTokens.accessToken,
         ).expect(200);
 
@@ -315,7 +315,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         otherTokens.accessToken,
       ).send({
         amount: 999,
@@ -327,7 +327,7 @@ describe('TransactionsController (e2e)', () => {
       const response = await authenticatedRequest(
         app,
         'get',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).expect(200);
 
@@ -339,14 +339,14 @@ describe('TransactionsController (e2e)', () => {
     });
   });
 
-  describe('PATCH /transactions/:id', () => {
+  describe('PUT /v1/transactions/:id', () => {
     let transactionId: string;
 
     beforeEach(async () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 50,
@@ -367,8 +367,8 @@ describe('TransactionsController (e2e)', () => {
 
       const response = await authenticatedRequest(
         app,
-        'patch',
-        `/transactions/${transactionId}`,
+        'put',
+        `/v1/transactions/${transactionId}`,
         authTokens.accessToken,
       )
         .send(updateData)
@@ -386,8 +386,8 @@ describe('TransactionsController (e2e)', () => {
 
       const response = await authenticatedRequest(
         app,
-        'patch',
-        `/transactions/${transactionId}`,
+        'put',
+        `/v1/transactions/${transactionId}`,
         authTokens.accessToken,
       )
         .send(updateData)
@@ -399,8 +399,8 @@ describe('TransactionsController (e2e)', () => {
     it('should reject update of non-existent transaction', async () => {
       await authenticatedRequest(
         app,
-        'patch',
-        '/transactions/non-existent-id',
+        'put',
+        '/v1/transactions/non-existent-id',
         authTokens.accessToken,
       )
         .send({ amount: 100 })
@@ -418,8 +418,8 @@ describe('TransactionsController (e2e)', () => {
 
       await authenticatedRequest(
         app,
-        'patch',
-        `/transactions/${transactionId}`,
+        'put',
+        `/v1/transactions/${transactionId}`,
         otherTokens.accessToken,
       )
         .send({ amount: 100 })
@@ -427,14 +427,14 @@ describe('TransactionsController (e2e)', () => {
     });
   });
 
-  describe('DELETE /transactions/:id', () => {
+  describe('DELETE /v1/transactions/:id', () => {
     let transactionId: string;
 
     beforeEach(async () => {
       const response = await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 50,
@@ -450,7 +450,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        `/transactions/${transactionId}`,
+        `/v1/transactions/${transactionId}`,
         authTokens.accessToken,
       ).expect(200);
 
@@ -465,7 +465,7 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        '/transactions/non-existent-id',
+        '/v1/transactions/non-existent-id',
         authTokens.accessToken,
       ).expect(404);
     });
@@ -482,18 +482,18 @@ describe('TransactionsController (e2e)', () => {
       await authenticatedRequest(
         app,
         'delete',
-        `/transactions/${transactionId}`,
+        `/v1/transactions/${transactionId}`,
         otherTokens.accessToken,
       ).expect(404);
     });
   });
 
-  describe('POST /transactions/search', () => {
+  describe('GET /v1/transactions (with query params)', () => {
     beforeEach(async () => {
       await authenticatedRequest(
         app,
         'post',
-        '/transactions',
+        '/v1/transactions',
         authTokens.accessToken,
       ).send({
         amount: 100,
@@ -502,14 +502,13 @@ describe('TransactionsController (e2e)', () => {
       });
     });
 
-    it('should search transactions with JSON body', async () => {
+    it('should list transactions with query parameters', async () => {
       const response = await authenticatedRequest(
         app,
-        'post',
-        '/transactions/search',
+        'get',
+        '/v1/transactions?limit=10',
         authTokens.accessToken,
       )
-        .send({ limit: 10 })
         .expect(200);
 
       const body = response.body as TransactionListResponse;

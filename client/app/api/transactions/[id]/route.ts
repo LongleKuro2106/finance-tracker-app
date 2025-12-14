@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
-export const PATCH = async (
+export const PUT = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
@@ -30,8 +30,8 @@ export const PATCH = async (
     }
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/transactions/${id}`, {
-      method: 'PATCH',
+    const res = await fetch(`${apiBase}/v1/transactions/${id}`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ export const DELETE = async (
     const { id } = await params
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/transactions/${id}`, {
+    const res = await fetch(`${apiBase}/v1/transactions/${id}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,

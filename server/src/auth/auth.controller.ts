@@ -3,7 +3,7 @@ import {
   Controller,
   Delete,
   Get,
-  Patch,
+  Put,
   Post,
   UseGuards,
   ValidationPipe,
@@ -24,7 +24,7 @@ import type { Request } from 'express';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-@Controller('auth')
+@Controller('v1/users')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -97,7 +97,7 @@ export class AuthController {
     return this.authService.getMe(user.userId);
   }
 
-  @Patch('me')
+  @Put('me')
   @UseGuards(JwtAuthGuard)
   updateProfile(
     @CurrentUser() user: authenticatedUserInterface.AuthenticatedUser,

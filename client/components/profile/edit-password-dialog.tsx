@@ -14,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { apiPatch } from '@/lib/api-client'
+import { apiPut } from '@/lib/api-client'
 
 const passwordSchema = z
   .object({
@@ -60,7 +60,7 @@ const EditPasswordDialog = ({
     setError(null)
 
     try {
-      await apiPatch('/api/auth/me', {
+      await apiPut('/api/auth/me', {
         password: values.password,
         confirmPassword: values.confirmPassword,
         oldPassword: values.oldPassword,

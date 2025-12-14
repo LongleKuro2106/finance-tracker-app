@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getApiBaseUrl } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
-export const PATCH = async (
+export const PUT = async (
   request: NextRequest,
   { params }: { params: Promise<{ month: string; year: string }> },
 ) => {
@@ -20,8 +20,8 @@ export const PATCH = async (
     const { month, year } = await params
 
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/budgets/${month}/${year}/toggle-preserve`, {
-      method: 'PATCH',
+    const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}/preserve`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',

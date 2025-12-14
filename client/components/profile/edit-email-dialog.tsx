@@ -14,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { apiPatch } from '@/lib/api-client'
+import { apiPut } from '@/lib/api-client'
 
 const emailSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required'),
@@ -59,7 +59,7 @@ const EditEmailDialog = ({
         return
       }
 
-      await apiPatch('/api/auth/me', {
+      await apiPut('/api/auth/me', {
         email: values.email,
         oldPassword: values.oldPassword,
       })

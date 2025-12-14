@@ -10,7 +10,7 @@ export const POST = async (request: Request) => {
   const body = await request.json()
 
   const apiBase = getApiBaseUrl()
-  const res = await fetch(`${apiBase}/auth/signup`, {
+  const res = await fetch(`${apiBase}/v1/users/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

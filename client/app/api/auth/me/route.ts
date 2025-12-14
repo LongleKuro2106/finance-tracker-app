@@ -11,7 +11,7 @@ export const GET = async () => {
 
   try {
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/auth/me`, {
+    const res = await fetch(`${apiBase}/v1/users/me`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -42,7 +42,7 @@ export const GET = async () => {
   }
 }
 
-export const PATCH = async (request: NextRequest) => {
+export const PUT = async (request: NextRequest) => {
   const accessToken = await getAccessToken()
 
   if (!accessToken) {
@@ -52,8 +52,8 @@ export const PATCH = async (request: NextRequest) => {
   try {
     const body = await request.json()
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/auth/me`, {
-      method: 'PATCH',
+    const res = await fetch(`${apiBase}/v1/users/me`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ export const DELETE = async (request: NextRequest) => {
   try {
     const body = await request.json()
     const apiBase = getApiBaseUrl()
-    const res = await fetch(`${apiBase}/auth/me`, {
+    const res = await fetch(`${apiBase}/v1/users/me`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${accessToken}`,

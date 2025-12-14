@@ -10,7 +10,7 @@ export const POST = async () => {
   if (accessToken && refreshToken) {
     try {
       const apiBase = getApiBaseUrl()
-      await fetch(`${apiBase}/auth/logout`, {
+      await fetch(`${apiBase}/v1/users/logout`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,

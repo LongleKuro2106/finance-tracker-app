@@ -75,42 +75,84 @@ The application includes several reusable custom hooks for common patterns, loca
 
 All hooks provide TypeScript type safety and are optimized for performance.
 
-## 🚀 API Routes
+## 🚀 API Routes (v1)
 
-### Authentication (`/auth`)
-- `POST /auth/signup` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/refresh` - Refresh access token
-- `POST /auth/logout` - Logout and revoke tokens
-- `GET /auth/me` - Get current user info
-- `PATCH /auth/me` - Update user profile (email, password)
-- `DELETE /auth/me` - Delete user account (requires password confirmation)
+All API endpoints are versioned under `/v1` and follow RESTful conventions using only `GET`, `POST`, `PUT`, and `DELETE` methods.
 
-### Transactions (`/transactions`)
-- `GET /transactions` - List user transactions (with pagination)
-- `POST /transactions` - Create new transaction
-- `POST /transactions/search` - Search transactions
-- `PATCH /transactions/:id` - Update transaction
-- `DELETE /transactions/:id` - Delete transaction
+### Authentication (`/v1/users`)
+- `POST /v1/users/signup` - User registration
+- `POST /v1/users/login` - User login
+- `POST /v1/users/refresh` - Refresh access token
+- `POST /v1/users/logout` - Logout and revoke tokens
+- `GET /v1/users/me` - Get current user info
+- `PUT /v1/users/me` - Update user profile (email, password) - Idempotent
+- `DELETE /v1/users/me` - Delete user account (requires password confirmation) - Idempotent
 
-### Budgets (`/budgets`)
-- `GET /budgets` - List all user budgets
-- `POST /budgets` - Create monthly budget
-- `GET /budgets/:month/:year` - Get specific month's budget
-- `PATCH /budgets/:month/:year` - Update budget
-- `DELETE /budgets/:month/:year` - Delete budget
-- `GET /budgets/status` - Get budget status for month/year
-- `POST /budgets/:month/:year/preserve` - Preserve budget to next month
-- `PATCH /budgets/:month/:year/toggle-preserve` - Toggle preserve setting
+### Transactions (`/v1/transactions`)
+- `GET /v1/transactions` - List user transactions with query language support
+- `POST /v1/transactions` - Create new transaction
+- `PUT /v1/transactions/:id` - Update transaction - Idempotent
+- `DELETE /v1/transactions/:id` - Delete transaction - Idempotent
 
-### Analytics (`/analytics`)
-- `GET /analytics/overview` - Get financial overview (revenue, expenses, balance)
-- `GET /analytics/monthly` - Get monthly trends (income vs expenses)
-- `GET /analytics/daily` - Get daily spending for current month (expenses by day)
-- `GET /analytics/categories` - Get category-wise breakdown
+**Query Language for GET /v1/transactions:**
+- **Pagination**: `?page=1&size=20` (page-based) or `?cursor=uuid&limit=20` (cursor-based)
+- **Sorting**: `?sort=date:desc,amount:asc`
+- **Filtering**:
+  - `?type=eq:income` - Equals
+  - `?amount=gt:100` - Greater than
+  - `?amount=lt:1000` - Less than
+  - `?categoryId=in:1,2,3` - In array
+  - `?description=match:groceries` - String contains (case-insensitive)
+
+### Budgets (`/v1/budgets`)
+- `GET /v1/budgets` - List all user budgets
+- `POST /v1/budgets` - Create monthly budget
+- `GET /v1/budgets/:month/:year` - Get specific month's budget
+- `PUT /v1/budgets/:month/:year` - Update budget - Idempotent
+- `DELETE /v1/budgets/:month/:year` - Delete budget - Idempotent
+- `GET /v1/budgets/status` - Get budget status for month/year (`?month=12&year=2024`)
+- `POST /v1/budgets/:month/:year/preserve` - Preserve budget to next month
+- `PUT /v1/budgets/:month/:year/preserve` - Toggle preserve setting - Idempotent
+
+### Analytics (`/v1/analytics`)
+- `GET /v1/analytics/overview` - Get financial overview (revenue, expenses, balance)
+  - Query params: `?startDate=2024-01-01&endDate=2024-12-31`
+- `GET /v1/analytics/monthly` - Get monthly trends (income vs expenses)
+  - Query params: `?months=12&startDate=2024-01-01&endDate=2024-12-31`
+- `GET /v1/analytics/daily` - Get daily spending for current month (expenses by day)
+  - Query params: `?year=2024&month=12`
+- `GET /v1/analytics/categories` - Get category-wise breakdown
+  - Query params: `?startDate=2024-01-01&endDate=2024-12-31`
 
 ### Health Check
-- `GET /health` - Service health check
+- `GET /health` - Service health check (unversioned)
+
+## 📋 Query Language Reference
+
+The API supports a flexible query language for filtering, sorting, and pagination:
+
+### Pagination
+- **Page-based**: `?page=1&size=20` (returns `{ data, pagination: { page, size, hasNext } }`)
+- **Cursor-based**: `?cursor=uuid&limit=20` (returns `{ data, nextCursor, pageSize }`)
+
+### Sorting
+- **Single field**: `?sort=date:desc`
+- **Multiple fields**: `?sort=date:desc,amount:asc`
+
+### Filtering Operators
+- `eq` - Equals: `?type=eq:income`
+- `ne` - Not equals: `?type=ne:expense`
+- `gt` - Greater than: `?amount=gt:100`
+- `gte` - Greater than or equal: `?amount=gte:100`
+- `lt` - Less than: `?amount=lt:1000`
+- `lte` - Less than or equal: `?amount=lte:1000`
+- `match` - String contains (case-insensitive): `?description=match:groceries`
+- `in` - Value in array: `?categoryId=in:1,2,3`
+
+### Example Query
+```
+GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&amount=gt:50&categoryId=in:1,2,3
+```
 
 ## 🔒 Security Features
 

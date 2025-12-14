@@ -23,7 +23,7 @@ import {
     ttl: 3_600_000, // 1 hour
   },
 }) // 40 requests per minute (10 refreshes), 500 requests per hour in production (optimal UX), unlimited in dev
-@Controller('analytics')
+@Controller('v1/analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

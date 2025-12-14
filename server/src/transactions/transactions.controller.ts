@@ -3,9 +3,8 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   Param,
-  Patch,
+  Put,
   Post,
   Query,
   Req,
@@ -18,6 +17,7 @@ import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { parseQuery } from '../common/utils/query-parser.util';
 
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
 @Throttle({
@@ -27,33 +27,25 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
     ttl: 60_000,
   },
 }) // 100 requests per minute in production, unlimited in dev
-@Controller('transactions')
+@Controller('v1/transactions')
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
 
   @Get()
   list(
     @Req() req: { user: { userId: string } },
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: string,
+    @Query() query: Record<string, string | undefined>,
   ) {
-    return this.service.listUserTransactions(req.user.userId, {
-      cursor,
-      limit: limit ? Number(limit) : 20,
-    });
-  }
+    // Parse query language (pagination, sorting, filtering)
+    const queryOptions = parseQuery(query, [
+      'type',
+      'categoryId',
+      'date',
+      'amount',
+      'description',
+    ]);
 
-  @Post('search')
-  @HttpCode(200)
-  listJson(
-    @Req() req: { user: { userId: string } },
-    @Body(ValidationPipe)
-    body: { cursor?: string; limit?: number },
-  ) {
-    return this.service.listUserTransactions(req.user.userId, {
-      cursor: body?.cursor,
-      limit: body?.limit ?? 20,
-    });
+    return this.service.listUserTransactions(req.user.userId, queryOptions);
   }
 
   @Post()
@@ -64,7 +56,7 @@ export class TransactionsController {
     return this.service.createForUser(req.user.userId, body);
   }
 
-  @Patch(':id')
+  @Put(':id')
   update(
     @Req() req: { user: { userId: string } },
     @Param('id') id: string,

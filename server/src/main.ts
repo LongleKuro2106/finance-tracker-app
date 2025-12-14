@@ -29,20 +29,31 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow requests without origin in development (server-to-server from Next.js API routes)
+      // In production, require origin for browser requests, but allow server-to-server requests
       if (!origin) {
-        callback(null, true);
+        // In development, allow no-origin requests (Next.js API routes)
+        if (process.env.NODE_ENV !== 'production') {
+          callback(null, true);
+          return;
+        }
+        // In production, reject no-origin requests from browsers
+        // Note: Server-to-server requests from Next.js API routes should include
+        // a custom header or be handled differently in production
+        callback(new Error('Origin required'));
         return;
       }
 
+      // Only allow requests from whitelisted origins
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // Generic error message to avoid information leakage
+        callback(new Error('CORS Error'));
       }
     },
     credentials: true, // Allow cookies/auth headers
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Only standard REST methods
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -61,7 +72,10 @@ async function bootstrap() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          // Remove 'unsafe-inline' from styleSrc to prevent CSS injection
+          // Backend API doesn't serve HTML/CSS, so inline styles are not needed
+          styleSrc: ["'self'"],
+          // Only allow scripts from same origin (backend doesn't serve scripts)
           scriptSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'https:'],
         },

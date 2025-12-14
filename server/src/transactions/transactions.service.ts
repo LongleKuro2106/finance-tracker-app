@@ -5,11 +5,11 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { CategoriesService } from '../categories/categories.service';
-
-interface ListOptions {
-  cursor?: string;
-  limit?: number;
-}
+import type { QueryOptions } from '../common/utils/query-parser.util';
+import {
+  filtersToPrismaWhere,
+  sortToPrismaOrderBy,
+} from '../common/utils/query-parser.util';
 
 // Helper function to format Decimal amounts to string with 2 decimal places
 function formatAmount(amount: string | number | Decimal): string {
@@ -49,20 +49,50 @@ export class TransactionsService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  async listUserTransactions(userId: string, opts: ListOptions) {
-    const pageSize = Math.max(1, Math.min(opts?.limit ?? 20, 100));
-
+  async listUserTransactions(userId: string, opts: QueryOptions) {
     const where: Prisma.TransactionWhereInput = {
       userId: userId,
     };
 
-    const cursor = opts?.cursor ? { id: opts.cursor } : undefined;
+    // Apply filters from query language
+    if (opts.filters && opts.filters.length > 0) {
+      Object.assign(where, filtersToPrismaWhere(opts.filters));
+    }
+
+    // Determine pagination method
+    let take: number;
+    let skip: number | undefined;
+    let cursor: { id: string } | undefined;
+
+    if (opts.pagination) {
+      // Page-based pagination
+      take = opts.pagination.size;
+      skip = opts.pagination.skip;
+    } else if (opts.cursor || opts.limit) {
+      // Cursor-based pagination (backward compatibility)
+      take = Math.max(1, Math.min(opts.limit ?? 20, 100)) + 1; // +1 to detect hasNext
+      cursor = opts.cursor ? { id: opts.cursor } : undefined;
+      skip = cursor ? 1 : undefined;
+    } else {
+      // Default pagination
+      take = 21; // Default 20 + 1 for hasNext detection
+      skip = undefined;
+    }
+
+    // Apply sorting
+    const orderBy =
+      opts.sort && opts.sort.length > 0
+        ? (sortToPrismaOrderBy(opts.sort) as
+            | Prisma.TransactionOrderByWithRelationInput
+            | Prisma.TransactionOrderByWithRelationInput[])
+        : ({ id: 'desc' } as Prisma.TransactionOrderByWithRelationInput); // Default: most recent first
 
     const items = await this.prisma.transaction.findMany({
       where,
-      orderBy: { id: 'desc' }, // Most recent first
-      take: pageSize + 1,
-      ...(cursor ? { cursor, skip: 1 } : {}),
+      orderBy,
+      take,
+      skip,
+      ...(cursor ? { cursor } : {}),
       include: {
         category: true, // Include category if exists
         user: {
@@ -75,14 +105,34 @@ export class TransactionsService {
       },
     });
 
-    const hasNext = items.length > pageSize;
-    const data = hasNext ? items.slice(0, pageSize) : items;
-    const nextCursor = hasNext ? String(data[data.length - 1]?.id) : null;
-    return {
-      data: data.map(formatTransactionResponse),
-      nextCursor,
-      pageSize,
-    };
+    // Handle pagination response
+    if (opts.pagination) {
+      // Page-based pagination response
+      const hasNext = items.length > opts.pagination.size;
+      const data = hasNext ? items.slice(0, opts.pagination.size) : items;
+
+      return {
+        data: data.map(formatTransactionResponse),
+        pagination: {
+          page: opts.pagination.page,
+          size: opts.pagination.size,
+          total: data.length, // Note: total count would require separate query
+          hasNext,
+        },
+      };
+    } else {
+      // Cursor-based pagination response (backward compatibility)
+      const pageSize = opts.limit ?? 20;
+      const hasNext = items.length > pageSize;
+      const data = hasNext ? items.slice(0, pageSize) : items;
+      const nextCursor = hasNext ? String(data[data.length - 1]?.id) : null;
+
+      return {
+        data: data.map(formatTransactionResponse),
+        nextCursor,
+        pageSize,
+      };
+    }
   }
 
   async createForUser(userId: string, dto: CreateTransactionDto) {

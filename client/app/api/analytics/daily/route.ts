@@ -23,7 +23,7 @@ export const GET = async (request: NextRequest) => {
     if (month) queryParams.set('month', month)
 
     const res = await fetch(
-      `${apiBase}/analytics/daily?${queryParams.toString()}`,
+      `${apiBase}/v1/analytics/daily?${queryParams.toString()}`,
       {
         method: 'GET',
         headers: {
