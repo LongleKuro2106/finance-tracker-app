@@ -22,8 +22,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Accept build argument for API base URL
-# Defaults to http://server:3010 for Docker, but can be overridden
-ARG NEXT_PUBLIC_API_BASE_URL=http://server:3010
+# Defaults to http://server:8000 for Docker, but can be overridden
+ARG NEXT_PUBLIC_API_BASE_URL=http://server:8000
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1

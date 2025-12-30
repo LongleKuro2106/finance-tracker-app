@@ -10,7 +10,7 @@ async function bootstrap() {
   app.set('trust proxy', true);
 
   // CORS configuration
-  // Client runs on port 3000, server on port 3010
+  // Client runs on port 3000, server on port 8000
   const allowedOrigins = (() => {
     const origins = process.env.ALLOWED_ORIGINS;
     if (!origins) {
@@ -90,7 +90,7 @@ async function bootstrap() {
   );
 
   // Bind to 0.0.0.0 to allow network access (not just localhost)
-  const port = process.env.PORT ?? 3010;
+  const port = process.env.PORT ?? 8000;
   const host = process.env.HOST ?? '0.0.0.0';
   await app.listen(port, host);
 

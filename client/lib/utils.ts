@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export const getApiBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
   if (envUrl && envUrl.length > 0) return envUrl
-  return 'http://localhost:3010'
+  return 'http://localhost:8000'
 }
 
 export type DecodedToken = {
