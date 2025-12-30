@@ -8,6 +8,7 @@ import { ThrottlerException } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import * as jwt from 'jsonwebtoken';
 import { hash, compare } from 'bcrypt';
 import type { User } from '@prisma/client';
 import { AccountLockoutService } from '../common/services/account-lockout.service';
@@ -262,7 +263,8 @@ export class AuthService {
 
     // Extract token ID from refresh token for rotation
     // Token is already validated above, so we can safely decode
-    const decoded: unknown = this.jwt.decode(refreshToken);
+    // Use jwt.decode directly since refresh tokens use separate secret
+    const decoded: unknown = jwt.decode(refreshToken);
     let tokenId: string | undefined;
 
     if (

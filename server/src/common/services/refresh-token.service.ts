@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import * as jwt from 'jsonwebtoken';
 import { PrismaService } from '../../prisma/prisma.service';
 
 interface RefreshTokenData {
@@ -14,11 +14,18 @@ interface RefreshTokenData {
 export class RefreshTokenService {
   private readonly refreshTokenStore = new Map<string, RefreshTokenData>();
   private readonly REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+  private readonly refreshTokenSecret: string;
 
-  constructor(
-    private readonly jwt: JwtService,
-    private readonly prisma: PrismaService,
-  ) {
+  constructor(private readonly prisma: PrismaService) {
+    // Get refresh token secret from environment - required in all environments
+    const secret = process.env.REFRESH_SECRET;
+    if (!secret) {
+      throw new Error(
+        'REFRESH_SECRET environment variable is required. Please set it in your .env file.',
+      );
+    }
+    this.refreshTokenSecret = secret;
+
     // Cleanup expired tokens every hour
     setInterval(() => this.cleanup(), 60 * 60 * 1000);
   }
@@ -31,18 +38,17 @@ export class RefreshTokenService {
     const expiresAt = new Date(Date.now() + this.REFRESH_TOKEN_EXPIRY_MS);
     const tokenId = this.generateTokenId();
 
-    const refreshToken = this.jwt.sign(
-      {
-        sub: userId,
-        username,
-        tokenVersion,
-        type: 'refresh',
-        tokenId,
-      },
-      {
-        expiresIn: '7d',
-      },
-    );
+    const payload = {
+      sub: userId,
+      username,
+      tokenVersion,
+      type: 'refresh',
+      tokenId,
+    };
+
+    const refreshToken = jwt.sign(payload, this.refreshTokenSecret, {
+      expiresIn: '7d',
+    });
 
     // Store token metadata
     this.refreshTokenStore.set(tokenId, {
@@ -62,7 +68,7 @@ export class RefreshTokenService {
     tokenVersion: number;
   } | null> {
     try {
-      const payload = this.jwt.verify(token) as unknown;
+      const payload = jwt.verify(token, this.refreshTokenSecret) as unknown;
 
       if (
         typeof payload !== 'object' ||

@@ -70,8 +70,9 @@ npm install
    CLIENT_HOST=0.0.0.0
    NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
-   # Security secrets
-   JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
+   # Security secrets (REQUIRED - no defaults)
+   JWT_SECRET=your_jwt_access_token_secret_here_minimum_32_characters_long
+   REFRESH_SECRET=your_refresh_token_secret_here_minimum_32_characters_long
 
    # CORS configuration
    ALLOWED_ORIGINS=http://localhost:3000
@@ -85,7 +86,10 @@ npm install
 
 3. **Generate secrets** (if needed):
    ```bash
-   # Generate JWT secret (32+ characters)
+   # Generate JWT access token secret (32+ characters)
+   openssl rand -base64 32
+
+   # Generate refresh token secret (32+ characters)
    openssl rand -base64 32
 
    # Generate database password
@@ -127,14 +131,63 @@ npm install
 
    This will create default categories (Groceries, Restaurants, Salary, etc.).
 
-### Step 5: Start Development Servers
+### Step 5: Configure Development Environment Variables
+
+**⚠️ IMPORTANT:** Before starting the development servers, you must configure environment variables for both client and server.
+
+#### Server `.env` File
+
+Create a `.env` file in the `server/` directory with the following required variables:
+
+```bash
+# Database
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/finance_tracker
+
+# JWT Secrets (REQUIRED - separate secrets for security)
+JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
+REFRESH_SECRET=your_refresh_secret_here_minimum_32_characters_long
+
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:3000
+
+# Test User Password (optional, for testing)
+TEST_USER_PASSWORD=your_test_password
+
+# Environment
+NODE_ENV=development
+```
+
+**Generate secrets:**
+```bash
+# Generate JWT secret
+openssl rand -base64 32
+
+# Generate refresh secret
+openssl rand -base64 32
+```
+
+#### Client `.env.local` File
+
+Create a `.env.local` file in the `client/` directory with the following required variables:
+
+```bash
+# API Base URL (points to backend server)
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+
+# Cookie Security (set to false for HTTP local development)
+SECURE_COOKIES=false
+```
+
+**Note:** Next.js automatically loads `.env.local` files. The `NEXT_PUBLIC_` prefix makes the variable available to the browser.
+
+### Step 6: Start Development Servers
 
 You need **two terminal windows**:
 
 **Terminal 1 - Backend Server:**
 ```bash
 cd server
-npm run start:dev
+npm run dev
 ```
 
 The server should start on `http://localhost:8000`
@@ -147,7 +200,7 @@ npm run dev
 
 The client should start on `http://localhost:3000`
 
-### Step 6: Access the Application
+### Step 7: Access the Application
 
 - **Frontend:** Open http://localhost:3000 in your browser
 - **Backend API:** http://localhost:8000
@@ -193,8 +246,9 @@ cd finance-tracker-app
    CLIENT_HOST=0.0.0.0
    NEXT_PUBLIC_API_BASE_URL=http://server:8000
 
-   # Security secrets
-   JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
+   # Security secrets (REQUIRED - no defaults)
+   JWT_SECRET=your_jwt_access_token_secret_here_minimum_32_characters_long
+   REFRESH_SECRET=your_refresh_token_secret_here_minimum_32_characters_long
 
    # CORS configuration
    ALLOWED_ORIGINS=http://localhost:3000
@@ -209,11 +263,15 @@ cd finance-tracker-app
    **Important Notes:**
    - `POSTGRES_HOST=postgres` (Docker service name, not `localhost`)
    - `NEXT_PUBLIC_API_BASE_URL=http://server:8000` (Docker service name)
+   - `JWT_SECRET` and `REFRESH_SECRET` are REQUIRED - no defaults provided
    - Generate strong passwords and secrets
 
 3. **Generate secrets** (if needed):
    ```bash
-   # Generate JWT secret (32+ characters)
+   # Generate JWT access token secret (32+ characters)
+   openssl rand -base64 32
+
+   # Generate refresh token secret (32+ characters)
    openssl rand -base64 32
 
    # Generate database password

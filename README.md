@@ -228,7 +228,7 @@ For detailed installation instructions, see [INSTALLATION.md](./INSTALLATION.md)
 1. Install dependencies (`npm install` in both `client/` and `server/`)
 2. Set up environment variables (copy `.env.sample` to `.env`)
 3. Set up database (`npx prisma migrate dev` and `npx prisma db seed`)
-4. Start development servers (`npm run start:dev` and `npm run dev`)
+4. Start development servers (`npm run dev` in both `server/` and `client/`)
 
 Or use Docker:
 ```bash
