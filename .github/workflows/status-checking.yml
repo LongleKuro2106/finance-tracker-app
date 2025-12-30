@@ -38,6 +38,7 @@ jobs:
       # Test configuration
       NODE_ENV: test
       JWT_SECRET: ${{ secrets.JWT_SECRET_TEST || 'test_jwt_secret_for_ci_fallback' }}
+      REFRESH_SECRET: ${{ secrets.REFRESH_SECRET_TEST || 'test_refresh_secret_for_ci_fallback' }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD || '' }}
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
       - name: Run client tests
         env:
           # NEXT_PUBLIC_API_BASE_URL is optional - tests mock API calls
-          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:3010'
+          NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8000'
         run: |
           cd client
           npm test -- --passWithNoTests --ci --coverage=false
@@ -78,4 +79,4 @@ jobs:
         run: |
           cd server
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
-          npm run test:e2e
+          npm test

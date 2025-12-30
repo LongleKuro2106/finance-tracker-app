@@ -17,16 +17,15 @@ import { RefreshTokenService } from '../common/services/refresh-token.service';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret:
-        process.env.JWT_SECRET ||
-        (() => {
-          if (process.env.NODE_ENV === 'production') {
-            throw new Error(
-              'JWT_SECRET environment variable is required in production',
-            );
-          }
-          return 'dev_jwt_secret';
-        })(),
+      secret: (() => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new Error(
+            'JWT_SECRET environment variable is required. Please set it in your .env file.',
+          );
+        }
+        return secret;
+      })(),
       signOptions: { expiresIn: '60m' },
     }),
     ThrottlerModule.forRoot([
