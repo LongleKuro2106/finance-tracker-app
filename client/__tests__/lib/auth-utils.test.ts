@@ -6,7 +6,7 @@ global.fetch = jest.fn()
 
 // Mock getApiBaseUrl
 jest.mock('@/lib/utils', () => ({
-  getApiBaseUrl: jest.fn(() => 'http://localhost:3010'),
+  getApiBaseUrl: jest.fn(() => 'http://localhost:8000'),
 }))
 
 describe('auth-utils', () => {
@@ -103,7 +103,7 @@ describe('auth-utils', () => {
 
       expect(result).toEqual(mockTokens)
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3010/v1/users/refresh',
+        'http://localhost:8000/v1/users/refresh',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

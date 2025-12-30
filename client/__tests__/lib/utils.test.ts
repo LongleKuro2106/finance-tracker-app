@@ -33,12 +33,12 @@ describe('utils', () => {
 
     it('should return default localhost URL if env var is not set', () => {
       delete process.env.NEXT_PUBLIC_API_BASE_URL
-      expect(getApiBaseUrl()).toBe('http://localhost:3010')
+      expect(getApiBaseUrl()).toBe('http://localhost:8000')
     })
 
     it('should return default localhost URL if env var is empty', () => {
       process.env.NEXT_PUBLIC_API_BASE_URL = ''
-      expect(getApiBaseUrl()).toBe('http://localhost:3010')
+      expect(getApiBaseUrl()).toBe('http://localhost:8000')
     })
   })
 

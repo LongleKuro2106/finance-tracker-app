@@ -62,13 +62,13 @@ npm install
    POSTGRES_HOST=localhost
 
    # Server configuration
-   SERVER_PORT=3010
+   SERVER_PORT=8000
    SERVER_HOST=0.0.0.0
 
    # Client configuration
    CLIENT_PORT=3000
    CLIENT_HOST=0.0.0.0
-   NEXT_PUBLIC_API_BASE_URL=http://localhost:3010
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
    # Security secrets
    JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
@@ -137,7 +137,7 @@ cd server
 npm run start:dev
 ```
 
-The server should start on `http://localhost:3010`
+The server should start on `http://localhost:8000`
 
 **Terminal 2 - Frontend Client:**
 ```bash
@@ -150,8 +150,8 @@ The client should start on `http://localhost:3000`
 ### Step 6: Access the Application
 
 - **Frontend:** Open http://localhost:3000 in your browser
-- **Backend API:** http://localhost:3010
-- **Health Check:** http://localhost:3010/health
+- **Backend API:** http://localhost:8000
+- **Health Check:** http://localhost:8000/health
 
 You should see the login page. Create an account to get started!
 
@@ -185,13 +185,13 @@ cd finance-tracker-app
    POSTGRES_HOST=postgres
 
    # Server configuration
-   SERVER_PORT=3010
+   SERVER_PORT=8000
    SERVER_HOST=0.0.0.0
 
    # Client configuration
    CLIENT_PORT=3000
    CLIENT_HOST=0.0.0.0
-   NEXT_PUBLIC_API_BASE_URL=http://server:3010
+   NEXT_PUBLIC_API_BASE_URL=http://server:8000
 
    # Security secrets
    JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
@@ -208,7 +208,7 @@ cd finance-tracker-app
 
    **Important Notes:**
    - `POSTGRES_HOST=postgres` (Docker service name, not `localhost`)
-   - `NEXT_PUBLIC_API_BASE_URL=http://server:3010` (Docker service name)
+   - `NEXT_PUBLIC_API_BASE_URL=http://server:8000` (Docker service name)
    - Generate strong passwords and secrets
 
 3. **Generate secrets** (if needed):
@@ -239,15 +239,15 @@ docker-compose logs -f
 **Expected output:**
 ```
 ✅ postgres    - Database running
-✅ server      - API running on port 3010
+✅ server      - API running on port 8000
 ✅ client      - Frontend running on port 3000
 ```
 
 ### Step 4: Access the Application
 
 - **Frontend:** Open http://localhost:3000 in your browser
-- **Backend API:** http://localhost:3010
-- **Health Check:** http://localhost:3010/health
+- **Backend API:** http://localhost:8000
+- **Health Check:** http://localhost:8000/health
 
 ### Step 5: Useful Docker Commands
 
@@ -284,7 +284,7 @@ docker-compose up --build -d
 
 ```bash
 # Using curl
-curl http://localhost:3010/health
+curl http://localhost:8000/health
 
 # Expected response:
 # {"status":"ok"}
@@ -349,8 +349,8 @@ lsof -i :3000
 **Error:** `Cannot connect to backend server`
 
 **Solutions:**
-- **npm:** Verify `NEXT_PUBLIC_API_BASE_URL=http://localhost:3010` in `.env`
-- **Docker:** Verify `NEXT_PUBLIC_API_BASE_URL=http://server:3010` in `.env`
+- **npm:** Verify `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in `.env`
+- **Docker:** Verify `NEXT_PUBLIC_API_BASE_URL=http://server:8000` in `.env`
 - Rebuild client: `docker-compose build --no-cache client`
 
 #### Migration Errors
