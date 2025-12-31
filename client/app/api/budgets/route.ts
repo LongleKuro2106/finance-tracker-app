@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const GET = async () => {
@@ -16,10 +16,9 @@ export const GET = async () => {
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       cache: 'no-store',
     })
 
@@ -82,10 +81,9 @@ export const POST = async (request: NextRequest) => {
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       body: JSON.stringify(body),
       cache: 'no-store',
     })

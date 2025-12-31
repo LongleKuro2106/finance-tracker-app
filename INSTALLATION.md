@@ -73,6 +73,7 @@ npm install
    # Security secrets (REQUIRED - no defaults)
    JWT_SECRET=your_jwt_access_token_secret_here_minimum_32_characters_long
    REFRESH_SECRET=your_refresh_token_secret_here_minimum_32_characters_long
+   INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
 
    # CORS configuration
    ALLOWED_ORIGINS=http://localhost:3000
@@ -146,6 +147,7 @@ DATABASE_URL=postgresql://postgres:your_password@localhost:5432/finance_tracker
 # JWT Secrets (REQUIRED - separate secrets for security)
 JWT_SECRET=your_jwt_secret_here_minimum_32_characters_long
 REFRESH_SECRET=your_refresh_secret_here_minimum_32_characters_long
+INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
 
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000
@@ -164,6 +166,9 @@ openssl rand -base64 32
 
 # Generate refresh secret
 openssl rand -base64 32
+
+# Generate internal secret for server-to-server authentication
+openssl rand -base64 32
 ```
 
 #### Client `.env.local` File
@@ -174,11 +179,19 @@ Create a `.env.local` file in the `client/` directory with the following require
 # API Base URL (points to backend server)
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
+# Internal Secret for server-to-server authentication (REQUIRED - must match server INTERNAL_SECRET)
+# This is used by Next.js API routes to authenticate with the backend
+INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
+
 # Cookie Security (set to false for HTTP local development)
 SECURE_COOKIES=false
 ```
 
-**Note:** Next.js automatically loads `.env.local` files. The `NEXT_PUBLIC_` prefix makes the variable available to the browser.
+**Important Notes:**
+- `INTERNAL_SECRET` must match the `INTERNAL_SECRET` value in the server `.env` file
+- This secret is used by Next.js API routes (server-side) to authenticate requests to the backend
+- The `NEXT_PUBLIC_` prefix is NOT used for `INTERNAL_SECRET` (it stays server-side only)
+- Next.js automatically loads `.env.local` files
 
 ### Step 6: Start Development Servers
 
@@ -249,6 +262,7 @@ cd finance-tracker-app
    # Security secrets (REQUIRED - no defaults)
    JWT_SECRET=your_jwt_access_token_secret_here_minimum_32_characters_long
    REFRESH_SECRET=your_refresh_token_secret_here_minimum_32_characters_long
+   INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
 
    # CORS configuration
    ALLOWED_ORIGINS=http://localhost:3000
@@ -263,8 +277,10 @@ cd finance-tracker-app
    **Important Notes:**
    - `POSTGRES_HOST=postgres` (Docker service name, not `localhost`)
    - `NEXT_PUBLIC_API_BASE_URL=http://server:8000` (Docker service name)
-   - `JWT_SECRET` and `REFRESH_SECRET` are REQUIRED - no defaults provided
-   - Generate strong passwords and secrets
+   - `JWT_SECRET`, `REFRESH_SECRET`, and `INTERNAL_SECRET` are REQUIRED - no defaults provided
+   - `INTERNAL_SECRET` must be the **SAME value** in both server `.env` and client `.env.local` files
+   - This secret is used for server-to-server authentication between Next.js API routes and the backend
+   - Generate strong passwords and secrets (minimum 32 characters recommended)
 
 3. **Generate secrets** (if needed):
    ```bash
@@ -272,6 +288,10 @@ cd finance-tracker-app
    openssl rand -base64 32
 
    # Generate refresh token secret (32+ characters)
+   openssl rand -base64 32
+
+   # Generate internal secret for server-to-server authentication (32+ characters)
+   # IMPORTANT: Use the SAME value for both server and client .env files
    openssl rand -base64 32
 
    # Generate database password
@@ -447,6 +467,44 @@ docker-compose build 2>&1 | tee build.log
 - Review the troubleshooting section above for common issues
 
 ---
+
+## Rate Limiting & Performance
+
+### Rate Limits (Production)
+
+The application implements rate limiting to protect against abuse and ensure fair usage:
+
+- **Auth Endpoints** (signup, login, refresh):
+  - 5 requests per minute
+  - 20 requests per hour
+  - IP-based throttling
+
+- **Transaction Endpoints**:
+  - 200 requests per minute
+  - 1000 requests per hour
+
+- **Budget Endpoints**:
+  - 200 requests per minute
+  - 1000 requests per hour
+
+- **Analytics Endpoints**:
+  - 200 requests per minute
+  - 1000 requests per hour
+
+**Note:** Rate limiting is **disabled in development** (`NODE_ENV=development`) to allow easier testing. It is automatically enabled in production.
+
+### Performance Optimizations
+
+The application includes several performance optimizations:
+
+- **Request Deduplication**: Prevents duplicate concurrent API requests
+- **API Response Caching**: 30-second cache for GET requests (60s for analytics)
+- **Request Debouncing**: 500ms debounce on data fetching hooks to prevent rapid successive calls
+- **Component Memoization**: React.memo, useMemo, useCallback for optimized renders
+- **Lazy Loading**: Chart components loaded on-demand (code splitting)
+- **Build Optimizations**: SWC minification, React strict mode, image optimization (AVIF/WebP)
+
+These optimizations reduce server load, improve response times, and provide a better user experience.
 
 ## Next Steps
 

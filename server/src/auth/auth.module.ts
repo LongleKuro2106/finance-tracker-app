@@ -20,12 +20,12 @@ import { RefreshTokenService } from '../common/services/refresh-token.service';
       secret: (() => {
         const secret = process.env.JWT_SECRET;
         if (!secret) {
-          throw new Error(
+            throw new Error(
             'JWT_SECRET environment variable is required. Please set it in your .env file.',
-          );
-        }
+            );
+          }
         return secret;
-      })(),
+        })(),
       signOptions: { expiresIn: '60m' },
     }),
     ThrottlerModule.forRoot([

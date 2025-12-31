@@ -11,6 +11,36 @@ export const getApiBaseUrl = (): string => {
   return 'http://localhost:8000'
 }
 
+/**
+ * Get the internal secret for server-to-server authentication
+ * This is only available server-side (in API routes and Server Components)
+ */
+export const getInternalSecret = (): string | undefined => {
+  // This is a server-side only environment variable
+  // It should NOT be prefixed with NEXT_PUBLIC_ for security
+  return process.env.INTERNAL_SECRET
+}
+
+/**
+ * Build headers object with internal secret for server-to-server requests
+ * This should be used in all Next.js API routes and Server Components
+ */
+export const buildInternalHeaders = (
+  additionalHeaders: Record<string, string> = {},
+): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...additionalHeaders,
+  }
+
+  const secret = getInternalSecret()
+  if (secret) {
+    headers['X-Internal-Secret'] = secret
+  }
+
+  return headers
+}
+
 export type DecodedToken = {
   sub: string
   username: string

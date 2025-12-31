@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { apiGet, ApiError } from '@/lib/api-client'
 import { useToast } from '@/components/shared/toast'
 
@@ -66,7 +66,18 @@ export function AnalyticsProvider({
   const [error, setError] = useState<string | null>(null)
   const { showToast } = useToast()
 
+  // Cache for analytics data to prevent over-fetching
+  const lastFetchRef = useRef<number>(0)
+  const CACHE_DURATION = 60000 // 60 seconds cache for analytics
+
   const fetchAnalytics = async () => {
+    // Prevent rapid successive calls (debounce)
+    const now = Date.now()
+    if (now - lastFetchRef.current < 1000) {
+      return // Skip if called within 1 second
+    }
+    lastFetchRef.current = now
+
     try {
       setLoading(true)
       setError(null)

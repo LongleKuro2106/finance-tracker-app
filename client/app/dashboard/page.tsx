@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DashboardWrapper from '../../components/dashboard/dashboard-wrapper'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { ACCESS_TOKEN_COOKIE_NAME } from '@/lib/cookie-names'
 
 const DashboardPage = async () => {
@@ -17,10 +17,9 @@ const DashboardPage = async () => {
   const apiBase = getApiBaseUrl()
   const res = await fetch(`${apiBase}/v1/users/me`, {
     method: 'GET',
-    headers: {
+    headers: buildInternalHeaders({
       Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
+    }),
     cache: 'no-store', // Always fetch fresh data
   })
 

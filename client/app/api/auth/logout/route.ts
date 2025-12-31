@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { getAccessToken, getRefreshToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const POST = async () => {
@@ -12,10 +12,9 @@ export const POST = async () => {
       const apiBase = getApiBaseUrl()
       await fetch(`${apiBase}/v1/users/logout`, {
         method: 'POST',
-        headers: {
+        headers: buildInternalHeaders({
           Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({ refreshToken }),
       })
     } catch {

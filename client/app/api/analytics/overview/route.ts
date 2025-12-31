@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const GET = async (request: NextRequest) => {
@@ -26,10 +26,9 @@ export const GET = async (request: NextRequest) => {
       `${apiBase}/v1/analytics/overview?${queryParams.toString()}`,
       {
         method: 'GET',
-        headers: {
+        headers: buildInternalHeaders({
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        }),
         cache: 'no-store',
       },
     )

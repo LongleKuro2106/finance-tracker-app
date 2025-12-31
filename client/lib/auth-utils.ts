@@ -2,7 +2,7 @@
  * Authentication utilities for token management
  */
 
-import { getApiBaseUrl } from './utils'
+import { getApiBaseUrl, buildInternalHeaders } from './utils'
 
 /**
  * Refresh the access token using the refresh token
@@ -15,7 +15,7 @@ export const refreshAccessToken = async (
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/users/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildInternalHeaders(),
       body: JSON.stringify({ refreshToken }),
     })
 

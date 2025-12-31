@@ -48,6 +48,18 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker
   output: 'standalone',
+  // Enable React compiler optimizations
+  reactStrictMode: true,
+  // Optimize images
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
   async headers() {
     return [
       {

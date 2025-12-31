@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import {
   ACCESS_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_COOKIE_NAME,
@@ -13,7 +13,7 @@ export const POST = async (request: Request) => {
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/users/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildInternalHeaders(),
       body: JSON.stringify(body),
     })
 

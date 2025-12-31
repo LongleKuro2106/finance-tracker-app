@@ -43,6 +43,7 @@ services:
       POSTGRES_HOST: ${POSTGRES_HOST}
       JWT_SECRET: ${JWT_SECRET}
       REFRESH_SECRET: ${REFRESH_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       THROTTLE_TTL: ${THROTTLE_TTL}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT}
@@ -72,6 +73,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       SECURE_COOKIES: ${SECURE_COOKIES}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       PORT: ${CLIENT_PORT}
       HOSTNAME: ${CLIENT_HOST}
       # Cookie names (optional - defaults to 'access_token' and 'refresh_token' for dev)

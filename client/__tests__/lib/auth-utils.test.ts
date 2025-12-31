@@ -1,12 +1,15 @@
 import { isTokenExpiringSoon, isTokenExpired, refreshAccessToken } from '@/lib/auth-utils'
-import { getApiBaseUrl } from '@/lib/utils'
 
 // Mock fetch globally
 global.fetch = jest.fn()
 
-// Mock getApiBaseUrl
+// Mock utils module
 jest.mock('@/lib/utils', () => ({
   getApiBaseUrl: jest.fn(() => 'http://localhost:8000'),
+  buildInternalHeaders: jest.fn(() => ({
+    'Content-Type': 'application/json',
+    'X-Internal-Secret': 'test-secret',
+  })),
 }))
 
 describe('auth-utils', () => {
@@ -106,7 +109,9 @@ describe('auth-utils', () => {
         'http://localhost:8000/v1/users/refresh',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
           body: JSON.stringify({ refreshToken: 'old-refresh-token' }),
         }),
       )

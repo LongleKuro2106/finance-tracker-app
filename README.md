@@ -61,7 +61,7 @@ The application includes several reusable custom hooks for common patterns, loca
 
 ### Hook Details
 
-**`useApi`** - Generic data fetching hook with built-in caching (30s default), automatic refetching, and request cancellation. Prevents duplicate API calls and reduces rate limiting.
+**`useApi`** - Generic data fetching hook with built-in caching (30s default), automatic refetching, request cancellation, and 500ms debouncing. Prevents duplicate API calls and reduces rate limiting.
 
 **`useDebounce`** - Delays value updates until user stops typing/changing. Perfect for search inputs to reduce unnecessary API calls.
 
@@ -69,9 +69,9 @@ The application includes several reusable custom hooks for common patterns, loca
 
 **`useLocalStorage`** - Synchronizes React state with browser localStorage. Automatically syncs across browser tabs. ⚠️ **Note:** Not used for sensitive data like tokens.
 
-**`useTransactions`** - Handles transaction data fetching with cursor-based pagination, infinite scroll support, and delete operations.
+**`useTransactions`** - Handles transaction data fetching with cursor-based pagination, infinite scroll support, delete operations, and 500ms debouncing to prevent over-fetching.
 
-**`useBudgets`** - Manages budget data with full CRUD operations including preserve functionality for copying budgets to next month.
+**`useBudgets`** - Manages budget data with full CRUD operations including preserve functionality for copying budgets to next month, with 500ms debouncing to prevent rapid successive calls.
 
 All hooks provide TypeScript type safety and are optimized for performance.
 
@@ -158,7 +158,7 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 
 - JWT authentication with token rotation
 - HttpOnly cookies for secure token storage
-- Rate limiting on all endpoints (disabled in development)
+- Rate limiting on all endpoints: 200 requests/minute, 1000 requests/hour (disabled in development)
 - Input validation and sanitization
 - HTML/Script sanitization (DOMPurify) for user input
 - SQL injection prevention via Prisma ORM
@@ -174,14 +174,16 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 
 ### Frontend
 - **Request Deduplication** - Prevents duplicate concurrent API requests
-- **API Response Caching** - 30-second cache for GET requests (reduces rate limiting)
+- **API Response Caching** - 30-second cache for GET requests (60s for analytics)
+- **Request Debouncing** - 500ms debounce on data fetching hooks to prevent rapid successive calls
 - **Component Memoization** - React.memo, useMemo, useCallback for optimized renders
 - **Lazy Loading** - Chart components loaded on-demand (code splitting)
-- **Custom Hooks** - Reusable data fetching hooks with built-in caching
+- **Custom Hooks** - Reusable data fetching hooks with built-in caching and debouncing
 - **Middleware Optimization** - Token refresh caching to prevent duplicate refresh calls
+- **Build Optimizations** - SWC minification, React strict mode, image optimization (AVIF/WebP), console removal in production
 
 ### Backend
-- **Rate Limiting** - Configurable limits (disabled in development for testing)
+- **Rate Limiting** - 200 requests/minute, 1000 requests/hour (disabled in development for testing)
 - **Database Indexing** - Optimized queries with proper indexes
 - **Token Rotation** - Refresh tokens rotated on each use
 - **Efficient Pagination** - Cursor-based pagination for transactions

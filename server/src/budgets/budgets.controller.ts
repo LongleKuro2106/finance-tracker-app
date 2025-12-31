@@ -24,10 +24,15 @@ import { PreserveBudgetDto } from './dto/preserve-budget.dto';
 @Throttle({
   default: {
     limit:
-      process.env.NODE_ENV === 'production' ? 100 : Number.MAX_SAFE_INTEGER,
+      process.env.NODE_ENV === 'production' ? 200 : Number.MAX_SAFE_INTEGER,
     ttl: 60_000,
   },
-}) // 100 requests per minute in production, unlimited in dev
+  long: {
+    limit:
+      process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
+    ttl: 3_600_000,
+  },
+}) // 200 requests per minute, 1000 requests per hour in production
 @Controller('v1/budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
