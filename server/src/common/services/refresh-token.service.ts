@@ -39,15 +39,15 @@ export class RefreshTokenService {
     const tokenId = this.generateTokenId();
 
     const payload = {
-      sub: userId,
-      username,
-      tokenVersion,
-      type: 'refresh',
-      tokenId,
+        sub: userId,
+        username,
+        tokenVersion,
+        type: 'refresh',
+        tokenId,
     };
 
     const refreshToken = jwt.sign(payload, this.refreshTokenSecret, {
-      expiresIn: '7d',
+        expiresIn: '7d',
     });
 
     // Store token metadata

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const GET = async (
@@ -21,10 +21,9 @@ export const GET = async (
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       cache: 'no-store',
     })
 
@@ -93,10 +92,9 @@ export const PUT = async (
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       body: JSON.stringify(body),
       cache: 'no-store',
     })
@@ -156,10 +154,9 @@ export const DELETE = async (
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       cache: 'no-store',
     })
 

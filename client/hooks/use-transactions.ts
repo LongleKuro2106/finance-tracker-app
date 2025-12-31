@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Transaction, TransactionsResponse } from '@/lib/utils'
 import { apiGet, apiDelete } from '@/lib/api-client'
 import { invalidateApiCache } from './use-api'
@@ -29,6 +29,8 @@ export function useTransactions(
   const [error, setError] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
+  const lastFetchRef = useRef<number>(0)
+  const DEBOUNCE_MS = 500 // Prevent rapid successive calls
 
   const fetchTransactions = useCallback(
     async (cursor?: string): Promise<TransactionsResponse> => {
@@ -49,6 +51,13 @@ export function useTransactions(
       return
     }
 
+    // Debounce rapid successive calls
+    const now = Date.now()
+    if (now - lastFetchRef.current < DEBOUNCE_MS && !loading) {
+      return
+    }
+    lastFetchRef.current = now
+
     setLoading(true)
     setError(null)
     try {
@@ -60,7 +69,7 @@ export function useTransactions(
     } finally {
       setLoading(false)
     }
-  }, [enabled, fetchTransactions])
+  }, [enabled, fetchTransactions, DEBOUNCE_MS, loading])
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return

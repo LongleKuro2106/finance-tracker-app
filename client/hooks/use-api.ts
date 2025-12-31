@@ -32,16 +32,31 @@ export function useApi<T>(
   options: UseApiOptions = {},
 ): UseApiResult<T> {
   const { enabled = true, refetchInterval, staleTime = 30000 } = options // Default 30s cache
+  const lastFetchRef = useRef<number>(0)
+  const previousUrlRef = useRef<string | null>(null)
+  const DEBOUNCE_MS = 500 // Prevent rapid successive calls
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (skipDebounce = false, skipCache = false) => {
     if (!url || !enabled) {
       setLoading(false)
       return
+    }
+
+    // Debounce rapid successive calls (skip for explicit refetch)
+    if (!skipDebounce) {
+      const now = Date.now()
+      if (now - lastFetchRef.current < DEBOUNCE_MS) {
+        return
+      }
+      lastFetchRef.current = now
+    } else {
+      // Update timestamp even when skipping debounce to prevent immediate re-debounce
+      lastFetchRef.current = Date.now()
     }
 
     // Cancel previous request
@@ -52,13 +67,15 @@ export function useApi<T>(
     abortControllerRef.current = new AbortController()
     const cacheKey = getCacheKey(url)
 
-    // Check cache first
-    const cached = apiCache.get(cacheKey)
-    if (cached && !isStale(cached)) {
-      setData(cached.data as T)
-      setLoading(false)
-      setError(null)
-      return
+    // Check cache first (skip for explicit refetch)
+    if (!skipCache) {
+      const cached = apiCache.get(cacheKey)
+      if (cached && !isStale(cached)) {
+        setData(cached.data as T)
+        setLoading(false)
+        setError(null)
+        return
+      }
     }
 
     setLoading(true)
@@ -89,19 +106,30 @@ export function useApi<T>(
         setLoading(false)
       }
     }
-  }, [url, enabled, staleTime])
+  }, [url, enabled, staleTime, DEBOUNCE_MS])
 
   const refetch = useCallback(async () => {
-    if (url) {
-      // Clear cache to force fresh fetch
-      const cacheKey = getCacheKey(url)
-      apiCache.delete(cacheKey)
-    }
-    await fetchData()
+    if (!url) return
+
+    // Clear cache to force fresh fetch
+    const cacheKey = getCacheKey(url)
+    apiCache.delete(cacheKey)
+    // Reset debounce timer to allow immediate refetch
+    lastFetchRef.current = 0
+
+    // Skip debounce and cache check for explicit refetch
+    await fetchData(true, true)
   }, [url, fetchData])
 
   useEffect(() => {
-    fetchData()
+    // Reset debounce timer when URL changes to allow immediate fetch
+    lastFetchRef.current = 0
+
+    // When URL changes, skip cache to ensure fresh data
+    const urlChanged = previousUrlRef.current !== null && previousUrlRef.current !== url
+    previousUrlRef.current = url
+
+    fetchData(false, urlChanged)
 
     // Set up interval if provided
     if (refetchInterval && refetchInterval > 0) {
@@ -118,7 +146,7 @@ export function useApi<T>(
         clearInterval(intervalRef.current)
       }
     }
-  }, [fetchData, refetchInterval])
+  }, [fetchData, refetchInterval, url])
 
   return { data, loading, error, refetch }
 }

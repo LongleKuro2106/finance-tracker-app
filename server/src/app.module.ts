@@ -22,17 +22,17 @@ const isProduction = process.env.NODE_ENV === 'production';
       {
         name: 'default',
         ttl: 60_000, // 1 minute
-        limit: isProduction ? 100 : Number.MAX_SAFE_INTEGER, // Unlimited in dev
+        limit: isProduction ? 200 : Number.MAX_SAFE_INTEGER, // 200 requests per minute in production
       },
       {
         name: 'short',
         ttl: 60_000, // 1 minute
-        limit: isProduction ? 5 : Number.MAX_SAFE_INTEGER, // Unlimited in dev
+        limit: isProduction ? 200 : Number.MAX_SAFE_INTEGER, // 200 requests per minute in production
       },
       {
         name: 'long',
         ttl: 3_600_000, // 1 hour
-        limit: isProduction ? 20 : Number.MAX_SAFE_INTEGER, // Unlimited in dev
+        limit: isProduction ? 1000 : Number.MAX_SAFE_INTEGER, // 1000 requests per hour in production
       },
     ]),
     UsersModule,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApiBaseUrl } from '@/lib/utils'
+import { getApiBaseUrl, buildInternalHeaders } from '@/lib/utils'
 import { getAccessToken, clearAuthCookies } from '@/lib/auth-helpers'
 
 export const PUT = async (
@@ -22,10 +22,9 @@ export const PUT = async (
     const apiBase = getApiBaseUrl()
     const res = await fetch(`${apiBase}/v1/budgets/${month}/${year}/preserve`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        headers: buildInternalHeaders({
+          Authorization: `Bearer ${token}`,
+        }),
       cache: 'no-store',
     })
 

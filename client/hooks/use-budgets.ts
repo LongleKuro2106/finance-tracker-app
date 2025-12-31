@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Budget } from '@/components/budgets/budget-card'
 import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api-client'
 import { invalidateApiCache } from './use-api'
@@ -19,12 +19,21 @@ export function useBudgets(): UseBudgetsResult {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const lastFetchRef = useRef<number>(0)
+  const DEBOUNCE_MS = 500 // Prevent rapid successive calls
 
   const fetchBudgets = useCallback(async (): Promise<Budget[]> => {
     return apiGet<Budget[]>('/api/budgets')
   }, [])
 
   const loadBudgets = useCallback(async () => {
+    // Debounce rapid successive calls
+    const now = Date.now()
+    if (now - lastFetchRef.current < DEBOUNCE_MS && !loading) {
+      return
+    }
+    lastFetchRef.current = now
+
     setLoading(true)
     setError(null)
     try {
@@ -35,7 +44,7 @@ export function useBudgets(): UseBudgetsResult {
     } finally {
       setLoading(false)
     }
-  }, [fetchBudgets])
+  }, [fetchBudgets, DEBOUNCE_MS, loading])
 
   const refetch = useCallback(async () => {
     invalidateApiCache('/api/budgets')
