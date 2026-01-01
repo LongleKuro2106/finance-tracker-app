@@ -22,6 +22,7 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
     deleteBudget,
     preserveBudget,
     togglePreserve,
+    isToggling,
   } = useBudgets()
 
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
@@ -128,6 +129,7 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
               onDelete={handleDeleteClick}
               onPreserve={handlePreserve}
               onTogglePreserve={handleTogglePreserve}
+              isToggling={isToggling(budget.month, budget.year)}
             />
         ))}
       </div>

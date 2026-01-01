@@ -28,6 +28,7 @@ interface BudgetCardProps {
   onDelete: (budget: Budget) => void
   onPreserve: (budget: Budget) => void
   onTogglePreserve: (budget: Budget) => void
+  isToggling?: boolean
 }
 
 const MONTH_NAMES = [
@@ -52,6 +53,7 @@ const BudgetCard = memo(
     onDelete,
     onPreserve,
     onTogglePreserve,
+    isToggling = false,
   }: BudgetCardProps) => {
     const formatAmount = useCallback((amount: number) => {
       return new Intl.NumberFormat('en-US', {
@@ -237,8 +239,10 @@ const BudgetCard = memo(
               id={`preserve-${budget.id}`}
               checked={budget.preserveToNextMonth}
               onChange={handleTogglePreserve}
-              className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary cursor-pointer"
+              disabled={isToggling}
+              className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Preserve budget to next month"
+              aria-busy={isToggling}
             />
             <label
               htmlFor={`preserve-${budget.id}`}

@@ -1,15 +1,18 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerException,
+  ThrottlerLimitDetail,
+} from '@nestjs/throttler';
 import { Request } from 'express';
 
 /**
  * User-based throttler guard: uses userId from JWT for rate limiting instead of IP address.
  * This ensures each authenticated user has their own rate limit bucket.
  * Falls back to IP-based limiting for unauthenticated requests.
- * Disables throttling in development mode for easier testing.
  */
 @Injectable()
-export class DevThrottlerGuard extends ThrottlerGuard {
+export class UserBasedThrottlerGuard extends ThrottlerGuard {
   /**
    * Generate a unique key for rate limiting based on user ID or IP address.
    * Authenticated users are tracked by userId, unauthenticated requests by IP.
@@ -27,19 +30,26 @@ export class DevThrottlerGuard extends ThrottlerGuard {
     return super.getTracker(req);
   }
 
+  /**
+   * Skip throttling in development mode for easier testing.
+   */
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
-    // Skip throttling in development mode
     if (process.env.NODE_ENV !== 'production') {
       return true;
     }
-
-    // Skip throttling for budget routes (user-specific data, no abuse risk)
-    const request = context.switchToHttp().getRequest<Request>();
-    const url = request.url || '';
-    if (url.includes('/v1/budgets')) {
-      return true;
-    }
-
     return super.shouldSkip(context);
+  }
+
+  /**
+   * Throw throttler exception with user-friendly error message.
+   */
+  protected throwThrottlingException(
+    context: ExecutionContext,
+    throttlerLimitDetail: ThrottlerLimitDetail,
+  ): Promise<void> {
+    // Suppress unused parameter warnings - required by base class signature
+    void context;
+    void throttlerLimitDetail;
+    throw new ThrottlerException('Too many requests. Please try again later.');
   }
 }
