@@ -35,12 +35,7 @@ cd finance-tracker-app
 Install dependencies for both server and client:
 
 ```bash
-# Install server dependencies
-cd server
-npm install
-
-# Install client dependencies
-cd ../client
+# Install all dependencies (workspaces handle both apps)
 npm install
 ```
 
@@ -121,12 +116,14 @@ npm install
 
 3. **Run migrations:**
    ```bash
-   cd server
+   cd apps/server
    npx prisma migrate dev
+   npx prisma generate
    ```
 
 4. **Seed the database:**
    ```bash
+   cd apps/server
    npx prisma db seed
    ```
 
@@ -138,7 +135,7 @@ npm install
 
 #### Server `.env` File
 
-Create a `.env` file in the `server/` directory with the following required variables:
+Create a `.env` file in the `apps/server/` directory with the following required variables:
 
 ```bash
 # Database
@@ -173,7 +170,7 @@ openssl rand -base64 32
 
 #### Client `.env.local` File
 
-Create a `.env.local` file in the `client/` directory with the following required variables:
+Create a `.env.local` file in the `apps/client/` directory with the following required variables:
 
 ```bash
 # API Base URL (points to backend server)
@@ -197,21 +194,26 @@ SECURE_COOKIES=false
 
 You need **two terminal windows**:
 
-**Terminal 1 - Backend Server:**
+**Single Terminal - All Apps (Turborepo):**
 ```bash
-cd server
+# From root directory
 npm run dev
 ```
 
-The server should start on `http://localhost:8000`
+This will start both:
+- Backend server on `http://localhost:8000`
+- Frontend client on `http://localhost:3000`
 
-**Terminal 2 - Frontend Client:**
+**Alternative - Individual Apps:**
 ```bash
-cd client
+# Backend only
+cd apps/server
+npm run dev
+
+# Frontend only
+cd apps/client
 npm run dev
 ```
-
-The client should start on `http://localhost:3000`
 
 ### Step 7: Access the Application
 
@@ -372,7 +374,7 @@ curl http://localhost:8000/health
 
 **For npm installation:**
 ```bash
-cd server
+cd apps/server
 npx prisma studio
 # Opens Prisma Studio at http://localhost:5555
 ```
@@ -438,7 +440,7 @@ lsof -i :3000
 **Solutions:**
 ```bash
 # Reset database (⚠️ deletes all data)
-cd server
+cd apps/server
 npx prisma migrate reset
 
 # Or manually reset
