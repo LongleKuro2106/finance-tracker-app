@@ -30,3 +30,7 @@ pnpm-debug.log*
 SECURITY_CHECKLIST.md
 SECURITY_NOTES.md
 
+# Turborepo
+.turbo
+
+node_modules/

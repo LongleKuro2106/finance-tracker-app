@@ -46,13 +46,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.11.0'
-      - name: Install server dependencies
+      - name: Install dependencies
         run: |
-          cd server
-          npm ci
-      - name: Install client dependencies
-        run: |
-          cd client
           npm ci
       - name: Run client tests
         env:
@@ -61,25 +56,25 @@ jobs:
           # INTERNAL_SECRET required for server-to-server authentication in API routes
           INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET_TEST || 'test_internal_secret_for_ci_fallback' }}
         run: |
-          cd client
+          cd apps/client
           npm test -- --passWithNoTests --ci --coverage=false
       - name: Generate Prisma Client
         run: |
-          cd server
+          cd apps/server
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
           npx prisma generate
       - name: Build server
         run: |
-          cd server
+          cd apps/server
           npm run build
       - name: Setup database
         run: |
-          cd server
+          cd apps/server
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
           npx prisma migrate deploy
           npx prisma db seed
       - name: Run server e2e tests
         run: |
-          cd server
+          cd apps/server
           export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
           npm test

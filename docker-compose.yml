@@ -23,7 +23,7 @@ services:
 
   server:
     build:
-      context: ./server
+      context: ./apps/server
       dockerfile: Dockerfile
     container_name: finance-tracker-server
     restart: unless-stopped
@@ -60,7 +60,7 @@ services:
 
   client:
     build:
-      context: ./client
+      context: ./apps/client
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
