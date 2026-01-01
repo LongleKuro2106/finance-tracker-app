@@ -12,27 +12,13 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
 
-@UseGuards(JwtAuthGuard, DevThrottlerGuard)
-@Throttle({
-  default: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 200 : Number.MAX_SAFE_INTEGER,
-    ttl: 60_000,
-  },
-  long: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
-    ttl: 3_600_000,
-  },
-}) // 200 requests per minute, 1000 requests per hour in production
+@UseGuards(JwtAuthGuard)
 @Controller('v1/budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
