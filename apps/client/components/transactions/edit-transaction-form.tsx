@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -15,53 +15,91 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import CategorySelector from './category-selector'
-import { apiPost } from '@/lib/api-client'
+import { apiPut } from '@/lib/api-client'
+import type { Transaction } from '@/lib/utils'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const transactionSchema = z.object({
-  amount: z.number().min(0, 'Amount must be greater than or equal to 0'),
+  amount: z
+    .number({
+      required_error: 'Amount is required',
+      invalid_type_error: 'Amount must be a valid number',
+    })
+    .min(0.01, 'Amount must be greater than 0')
+    .max(999999999.99, 'Amount exceeds maximum allowed value'),
   date: z.string().min(1, 'Date is required'),
   type: z.enum(['income', 'expense'], {
     required_error: 'Transaction type is required',
   }),
   categoryName: z.string().optional(),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(500, 'Description must be less than 500 characters')
+    .optional(),
 })
 
 type TransactionFormValues = z.infer<typeof transactionSchema>
 
-interface AddTransactionFormProps {
-  isOpen?: boolean
-  onClose?: () => void
+interface EditTransactionFormProps {
+  isOpen: boolean
+  onClose: () => void
   onSuccess: () => void
-  asPage?: boolean
+  transaction: Transaction
 }
 
-const AddTransactionForm = ({
-  isOpen = true,
+const EditTransactionForm = ({
+  isOpen,
   onClose,
   onSuccess,
-  asPage = false,
-}: AddTransactionFormProps) => {
+  transaction,
+}: EditTransactionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * Formats date string to YYYY-MM-DD format for HTML date input
+   */
+  const formatDateForInput = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  }
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      amount: 0,
-      date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
-      type: 'expense',
-      categoryName: '',
-      description: '',
+      amount: typeof transaction.amount === 'string'
+        ? parseFloat(transaction.amount)
+        : transaction.amount,
+      date: formatDateForInput(transaction.date),
+      type: transaction.type,
+      categoryName: transaction.category?.name || '',
+      description: transaction.description || '',
     },
   })
+
+  /**
+   * Resets form values when transaction prop changes or dialog opens
+   */
+  useEffect(() => {
+    if (isOpen && transaction) {
+      form.reset({
+        amount: typeof transaction.amount === 'string'
+          ? parseFloat(transaction.amount)
+          : transaction.amount,
+        date: formatDateForInput(transaction.date),
+        type: transaction.type,
+        categoryName: transaction.category?.name || '',
+        description: transaction.description || '',
+      })
+    }
+  }, [isOpen, transaction, form])
 
   const handleSubmit = async (values: TransactionFormValues) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      await apiPost('/api/transactions', {
+      await apiPut(`/api/transactions/${transaction.id}`, {
         amount: values.amount,
         date: values.date,
         type: values.type,
@@ -69,25 +107,19 @@ const AddTransactionForm = ({
         description: values.description || undefined,
       })
 
-      // Reset form and handle success
       form.reset()
       onSuccess()
-      if (asPage) {
-        // If it's a page, onSuccess will handle navigation
-        return
-      }
-      if (onClose) {
-        onClose()
-      }
+      onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create transaction')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleClose = () => {
-    if (!isSubmitting && onClose) {
+    if (!isSubmitting) {
       form.reset()
       setError(null)
       onClose()
@@ -95,57 +127,55 @@ const AddTransactionForm = ({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && !isSubmitting && !asPage && onClose) {
+    if (e.key === 'Escape' && !isSubmitting) {
       handleClose()
     }
   }
 
   if (!isOpen) return null
 
-  const formContent = (
-    <>
-      {!asPage && (
-        <div className="flex items-center justify-between mb-4">
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleClose}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-transaction-form-title"
+    >
+      <div
+        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
           <h2
-            id="transaction-form-title"
+            id="edit-transaction-form-title"
             className="text-xl font-semibold"
           >
-            Add Transaction
+            Edit Transaction
           </h2>
-          {onClose && (
-            <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Close dialog"
-              tabIndex={0}
+          <button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Close dialog"
+            tabIndex={0}
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          )}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
-      )}
-
-      {asPage && (
-        <h2
-          id="transaction-form-title"
-          className="text-xl font-semibold mb-4"
-        >
-          Add Transaction
-        </h2>
-      )}
 
         <Form {...form}>
           <form
@@ -285,36 +315,15 @@ const AddTransactionForm = ({
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
               >
-                {isSubmitting ? 'Adding...' : 'Add Transaction'}
+                {isSubmitting ? 'Updating...' : 'Update Transaction'}
               </Button>
             </div>
           </form>
         </Form>
-    </>
-  )
-
-  if (asPage) {
-    return formContent
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleClose}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="transaction-form-title"
-    >
-      <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {formContent}
       </div>
     </div>
   )
 }
 
-export default AddTransactionForm
+export default EditTransactionForm
 

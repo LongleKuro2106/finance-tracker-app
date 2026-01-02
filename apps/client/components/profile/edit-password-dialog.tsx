@@ -14,53 +14,71 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { apiDelete } from '@/lib/api-client'
-import { useRouter } from 'next/navigation'
+import { apiPut } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
-const deleteAccountSchema = z
+const passwordSchema = z
   .object({
-    password: z.string().min(1, 'Password is required'),
-    confirmPassword: z.string().min(1, 'Password confirmation is required'),
+    oldPassword: z.string().min(1, 'Current password is required'),
+    password: z
+      .string()
+      .min(1, 'New password is required')
+      .min(6, 'Password must be at least 6 characters long')
+      .max(72, 'Password must be less than 72 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'The passwords you entered do not match',
     path: ['confirmPassword'],
   })
+  .refine((data) => data.password !== data.oldPassword, {
+    message: 'New password must be different from your current password',
+    path: ['password'],
+  })
 
-type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>
+type PasswordFormValues = z.infer<typeof passwordSchema>
 
-interface DeleteAccountDialogProps {
+interface EditPasswordDialogProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess: () => void
 }
 
-const DeleteAccountDialog = ({
+const EditPasswordDialog = ({
   isOpen,
   onClose,
-}: DeleteAccountDialogProps) => {
+  onSuccess,
+}: EditPasswordDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
-  const form = useForm<DeleteAccountFormValues>({
-    resolver: zodResolver(deleteAccountSchema),
+  const form = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
     defaultValues: {
+      oldPassword: '',
       password: '',
       confirmPassword: '',
     },
   })
 
-  const handleSubmit = async (values: DeleteAccountFormValues) => {
+  const handleSubmit = async (values: PasswordFormValues) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      await apiDelete('/api/auth/me', { password: values.password })
+      await apiPut('/api/auth/me', {
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+        oldPassword: values.oldPassword,
+      })
 
-      // API route already clears cookies, just redirect to login
-      router.push('/login')
+      onSuccess()
+      form.reset()
+      onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete account')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -86,30 +104,18 @@ const DeleteAccountDialog = ({
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="delete-account-dialog-title"
+      aria-labelledby="edit-password-dialog-title"
     >
       <div
         className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
-          id="delete-account-dialog-title"
-          className="text-xl font-semibold text-red-600 dark:text-red-400"
+          id="edit-password-dialog-title"
+          className="text-xl font-semibold"
         >
-          Delete Account
+          Change Password
         </h2>
-
-        <div className="text-sm text-neutral-600 dark:text-neutral-400">
-          <p className="mb-2">
-            This action cannot be undone. This will permanently delete your
-            account and all associated data including:
-          </p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>All transactions</li>
-            <li>All budgets</li>
-            <li>Your profile information</li>
-          </ul>
-        </div>
 
         <Form {...form}>
           <form
@@ -118,14 +124,33 @@ const DeleteAccountDialog = ({
           >
             <FormField
               control={form.control}
-              name="password"
+              name="oldPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel>Current Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Enter your password to confirm"
+                      placeholder="Enter your current password"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your new password"
                       {...field}
                       disabled={isSubmitting}
                     />
@@ -140,11 +165,11 @@ const DeleteAccountDialog = ({
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Re-enter Password</FormLabel>
+                  <FormLabel>Confirm New Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Re-enter your password"
+                      placeholder="Confirm your new password"
                       {...field}
                       disabled={isSubmitting}
                     />
@@ -176,9 +201,8 @@ const DeleteAccountDialog = ({
                 type="submit"
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
-                className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-800"
               >
-                {isSubmitting ? 'Deleting...' : 'Delete Account'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </form>
@@ -188,5 +212,5 @@ const DeleteAccountDialog = ({
   )
 }
 
-export default DeleteAccountDialog
+export default EditPasswordDialog
 

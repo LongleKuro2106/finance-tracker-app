@@ -35,12 +35,7 @@ cd finance-tracker-app
 Install dependencies for both server and client:
 
 ```bash
-# Install server dependencies
-cd server
-npm install
-
-# Install client dependencies
-cd ../client
+# Install all dependencies (workspaces handle both apps)
 npm install
 ```
 
@@ -63,11 +58,13 @@ npm install
 
    # Server configuration
    SERVER_PORT=8000
-   SERVER_HOST=0.0.0.0
+   # Note: HOST defaults to 0.0.0.0 in main.ts (correct for Docker)
+   # Only set SERVER_HOST if you need to override (not recommended)
 
    # Client configuration
    CLIENT_PORT=3000
-   CLIENT_HOST=0.0.0.0
+   # Note: HOSTNAME defaults to 0.0.0.0 in Dockerfile (correct for Docker)
+   # Only set CLIENT_HOST if you need to override (not recommended)
    NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
    # Security secrets (REQUIRED - no defaults)
@@ -121,12 +118,14 @@ npm install
 
 3. **Run migrations:**
    ```bash
-   cd server
+   cd apps/server
    npx prisma migrate dev
+   npx prisma generate
    ```
 
 4. **Seed the database:**
    ```bash
+   cd apps/server
    npx prisma db seed
    ```
 
@@ -138,7 +137,7 @@ npm install
 
 #### Server `.env` File
 
-Create a `.env` file in the `server/` directory with the following required variables:
+Create a `.env` file in the `apps/server/` directory with the following required variables:
 
 ```bash
 # Database
@@ -173,7 +172,7 @@ openssl rand -base64 32
 
 #### Client `.env.local` File
 
-Create a `.env.local` file in the `client/` directory with the following required variables:
+Create a `.env.local` file in the `apps/client/` directory with the following required variables:
 
 ```bash
 # API Base URL (points to backend server)
@@ -197,21 +196,26 @@ SECURE_COOKIES=false
 
 You need **two terminal windows**:
 
-**Terminal 1 - Backend Server:**
+**Single Terminal - All Apps (Turborepo):**
 ```bash
-cd server
+# From root directory
 npm run dev
 ```
 
-The server should start on `http://localhost:8000`
+This will start both:
+- Backend server on `http://localhost:8000`
+- Frontend client on `http://localhost:3000`
 
-**Terminal 2 - Frontend Client:**
+**Alternative - Individual Apps:**
 ```bash
-cd client
+# Backend only
+cd apps/server
+npm run dev
+
+# Frontend only
+cd apps/client
 npm run dev
 ```
-
-The client should start on `http://localhost:3000`
 
 ### Step 7: Access the Application
 
@@ -252,12 +256,25 @@ cd finance-tracker-app
 
    # Server configuration
    SERVER_PORT=8000
-   SERVER_HOST=0.0.0.0
+   # Note: HOST defaults to 0.0.0.0 in main.ts (correct for Docker)
+   # SERVER_HOST is not needed - removed from docker-compose.yml
 
    # Client configuration
    CLIENT_PORT=3000
-   CLIENT_HOST=0.0.0.0
-   NEXT_PUBLIC_API_BASE_URL=http://server:8000
+   # Note: HOSTNAME defaults to 0.0.0.0 in Dockerfile (correct for Docker)
+   # CLIENT_HOST is not needed - removed from docker-compose.yml
+
+   # API Base URL Configuration
+   # IMPORTANT: Set this to the HOST-ACCESSIBLE URL (not Docker service name)
+   # This is used for client-side code and CSP headers (baked into bundle at build time)
+   # Examples:
+   #   - Local access: http://localhost:8000
+   #   - Network access: http://192.168.1.100:8000
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+
+   # Note: API_BASE_URL is automatically set to http://server:8000 in docker-compose.yml
+   # This is used server-side (Next.js API routes) for Docker internal networking
+   # You don't need to set this manually
 
    # Security secrets (REQUIRED - no defaults)
    JWT_SECRET=your_jwt_access_token_secret_here_minimum_32_characters_long
@@ -265,6 +282,11 @@ cd finance-tracker-app
    INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
 
    # CORS configuration
+   # Set this to match the URL you use to access the frontend
+   # Examples:
+   #   - Local access: http://localhost:3000
+   #   - Network access: http://192.168.1.100:3000
+   #   - Multiple origins: http://localhost:3000,http://127.0.0.1:3000
    ALLOWED_ORIGINS=http://localhost:3000
 
    # Cookie security (set to false for HTTP local development)
@@ -276,10 +298,15 @@ cd finance-tracker-app
 
    **Important Notes:**
    - `POSTGRES_HOST=postgres` (Docker service name, not `localhost`)
-   - `NEXT_PUBLIC_API_BASE_URL=http://server:8000` (Docker service name)
+   - `NEXT_PUBLIC_API_BASE_URL` should be set to the **host-accessible URL** (e.g., `http://localhost:8000`), NOT the Docker service name
+     - This is baked into the client bundle at build time
+     - Used for CSP headers and any client-side code
+   - `API_BASE_URL` is automatically set to `http://server:8000` in docker-compose.yml for server-side communication
+     - Used by Next.js API routes (server-side) to communicate with backend via Docker internal networking
+     - You don't need to set this manually
+   - `ALLOWED_ORIGINS` must match the URL you use to access the frontend (e.g., `http://localhost:3000`)
    - `JWT_SECRET`, `REFRESH_SECRET`, and `INTERNAL_SECRET` are REQUIRED - no defaults provided
-   - `INTERNAL_SECRET` must be the **SAME value** in both server `.env` and client `.env.local` files
-   - This secret is used for server-to-server authentication between Next.js API routes and the backend
+   - `INTERNAL_SECRET` must be the **SAME value** in both server `.env` and client `.env.local` files (for npm installation)
    - Generate strong passwords and secrets (minimum 32 characters recommended)
 
 3. **Generate secrets** (if needed):
@@ -310,9 +337,19 @@ docker-compose logs -f
 
 **What happens:**
 1. Docker builds images for server and client
+   - Client build bakes `NEXT_PUBLIC_API_BASE_URL` into the bundle (from `.env` or build arg)
+   - Server build prepares NestJS application
 2. PostgreSQL container starts with your database
 3. Server container starts, runs migrations, and seeds the database
 4. Client container starts and serves the frontend
+   - Server-side API routes use `API_BASE_URL=http://server:8000` (Docker internal networking)
+   - Client-side code uses `NEXT_PUBLIC_API_BASE_URL` (host-accessible URL)
+
+**Important:** If you change `NEXT_PUBLIC_API_BASE_URL` in `.env`, you must rebuild the client:
+```bash
+docker-compose build --no-cache client
+docker-compose up -d client
+```
 
 **Expected output:**
 ```
@@ -326,6 +363,34 @@ docker-compose logs -f
 - **Frontend:** Open http://localhost:3000 in your browser
 - **Backend API:** http://localhost:8000
 - **Health Check:** http://localhost:8000/health
+
+### Understanding Docker Networking
+
+The application uses two different API URLs depending on where the request originates:
+
+1. **Server-side requests** (Next.js API routes running in the client container):
+   - Use `API_BASE_URL=http://server:8000` (Docker service name)
+   - This is automatically set in docker-compose.yml
+   - Works via Docker's internal DNS networking
+   - No CORS needed (server-to-server communication)
+
+2. **Client-side requests** (browser JavaScript):
+   - Use `NEXT_PUBLIC_API_BASE_URL` (host-accessible URL)
+   - Must be set to a URL accessible from your browser (e.g., `http://localhost:8000`)
+   - Baked into the bundle at build time
+   - Requires CORS configuration on backend
+
+**Configuration Summary:**
+- `NEXT_PUBLIC_API_BASE_URL`: Host-accessible URL (e.g., `http://localhost:8000`)
+- `API_BASE_URL`: Automatically set to `http://server:8000` (Docker internal)
+- `ALLOWED_ORIGINS`: Must match frontend URL (e.g., `http://localhost:3000`)
+
+**If you change `NEXT_PUBLIC_API_BASE_URL`:**
+You must rebuild the client container because it's baked into the bundle:
+```bash
+docker-compose build --no-cache client
+docker-compose up -d client
+```
 
 ### Step 5: Useful Docker Commands
 
@@ -372,7 +437,7 @@ curl http://localhost:8000/health
 
 **For npm installation:**
 ```bash
-cd server
+cd apps/server
 npx prisma studio
 # Opens Prisma Studio at http://localhost:5555
 ```
@@ -393,6 +458,55 @@ docker-compose exec server npx prisma studio
 ---
 
 ## Troubleshooting
+
+### Docker-Specific Issues
+
+#### CORS Errors in Docker
+
+**Error:** `CORS Error` or `500 Internal Server Error` when accessing frontend
+
+**Solutions:**
+1. Verify `ALLOWED_ORIGINS` matches the exact URL you use to access the frontend:
+   ```bash
+   # If accessing via http://localhost:3000
+   ALLOWED_ORIGINS=http://localhost:3000
+
+   # If accessing via http://127.0.0.1:3000
+   ALLOWED_ORIGINS=http://127.0.0.1:3000
+
+   # Multiple origins (comma-separated, no spaces)
+   ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+   ```
+
+2. Verify `NEXT_PUBLIC_API_BASE_URL` is set to host-accessible URL:
+   ```bash
+   # Correct (host-accessible)
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+
+   # Incorrect (Docker service name - won't work from browser)
+   # NEXT_PUBLIC_API_BASE_URL=http://server:8000
+   ```
+
+3. Rebuild client after changing `NEXT_PUBLIC_API_BASE_URL`:
+   ```bash
+   docker-compose build --no-cache client
+   docker-compose up -d client
+   ```
+
+4. Check server logs for CORS errors:
+   ```bash
+   docker-compose logs server | grep -i cors
+   ```
+
+#### Services Binding to Wrong Address
+
+**Issue:** Services binding to `0.0.0.0:3000` or `0.0.0.0:8000` instead of expected address
+
+**Solution:** This is **correct behavior** for Docker. Services should bind to `0.0.0.0` inside containers:
+- `0.0.0.0` means "listen on all network interfaces"
+- Docker port mapping (`"${CLIENT_PORT}:3000"`) handles exposing to host
+- Do NOT set `CLIENT_HOST` or `SERVER_HOST` - they're not needed and can cause issues
+- The defaults in code (main.ts and Dockerfile) are correct
 
 ### Common Issues
 
@@ -424,12 +538,16 @@ lsof -i :3000
 
 #### Frontend Can't Connect to Backend
 
-**Error:** `Cannot connect to backend server`
+**Error:** `Cannot connect to backend server` or `500 Internal Server Error` on login
 
 **Solutions:**
-- **npm:** Verify `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in `.env`
-- **Docker:** Verify `NEXT_PUBLIC_API_BASE_URL=http://server:8000` in `.env`
-- Rebuild client: `docker-compose build --no-cache client`
+- **npm:** Verify `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` in `.env.local`
+- **Docker:**
+  - Verify `NEXT_PUBLIC_API_BASE_URL` is set to **host-accessible URL** (e.g., `http://localhost:8000`), NOT `http://server:8000`
+  - Verify `ALLOWED_ORIGINS` matches the URL you use to access the frontend (e.g., `http://localhost:3000`)
+  - Rebuild client after changing `NEXT_PUBLIC_API_BASE_URL`: `docker-compose build --no-cache client`
+  - Check server logs: `docker-compose logs server` (look for CORS errors)
+  - Check client logs: `docker-compose logs client` (look for API connection errors)
 
 #### Migration Errors
 
@@ -438,7 +556,7 @@ lsof -i :3000
 **Solutions:**
 ```bash
 # Reset database (⚠️ deletes all data)
-cd server
+cd apps/server
 npx prisma migrate reset
 
 # Or manually reset

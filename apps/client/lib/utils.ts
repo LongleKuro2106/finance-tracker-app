@@ -6,6 +6,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getApiBaseUrl = (): string => {
+  // Server-side (Next.js API routes, Server Components):
+  // - In Docker: use Docker service name 'server' for internal communication
+  // - Locally: use localhost or NEXT_PUBLIC_API_BASE_URL
+  // Client-side: NEXT_PUBLIC_API_BASE_URL is baked in at build time
+
+  if (typeof window === 'undefined') {
+    // Server-side execution
+    // Check for explicit server-side API URL (for Docker internal networking)
+    const serverApiUrl = process.env.API_BASE_URL
+    if (serverApiUrl && serverApiUrl.length > 0) {
+      return serverApiUrl
+    }
+    // Fallback: use NEXT_PUBLIC_API_BASE_URL or default to localhost
+    const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+    return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:8000'
+  }
+
+  // Client-side: use NEXT_PUBLIC_API_BASE_URL (set at build time)
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
   if (envUrl && envUrl.length > 0) return envUrl
   return 'http://localhost:8000'

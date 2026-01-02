@@ -15,54 +15,57 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { apiPut } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
-const passwordSchema = z
-  .object({
-    oldPassword: z.string().min(1, 'Current password is required'),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .max(72, 'Password must be less than 72 characters'),
-    confirmPassword: z.string().min(1, 'Password confirmation is required'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
+const emailSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email address is required')
+    .email('Please enter a valid email address')
+    .trim()
+    .toLowerCase(),
+  oldPassword: z.string().min(1, 'Current password is required'),
+})
 
-type PasswordFormValues = z.infer<typeof passwordSchema>
+type EmailFormValues = z.infer<typeof emailSchema>
 
-interface EditPasswordDialogProps {
+interface EditEmailDialogProps {
   isOpen: boolean
   onClose: () => void
+  currentEmail: string
   onSuccess: () => void
 }
 
-const EditPasswordDialog = ({
+const EditEmailDialog = ({
   isOpen,
   onClose,
+  currentEmail,
   onSuccess,
-}: EditPasswordDialogProps) => {
+}: EditEmailDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<EmailFormValues>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
+      email: currentEmail,
       oldPassword: '',
-      password: '',
-      confirmPassword: '',
     },
   })
 
-  const handleSubmit = async (values: PasswordFormValues) => {
+  const handleSubmit = async (values: EmailFormValues) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
+      if (values.email === currentEmail) {
+        setError('The new email address must be different from your current email')
+        setIsSubmitting(false)
+        return
+      }
+
       await apiPut('/api/auth/me', {
-        password: values.password,
-        confirmPassword: values.confirmPassword,
+        email: values.email,
         oldPassword: values.oldPassword,
       })
 
@@ -70,7 +73,8 @@ const EditPasswordDialog = ({
       form.reset()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update password')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -97,17 +101,17 @@ const EditPasswordDialog = ({
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="edit-password-dialog-title"
+      aria-labelledby="edit-email-dialog-title"
     >
       <div
         className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
-          id="edit-password-dialog-title"
+          id="edit-email-dialog-title"
           className="text-xl font-semibold"
         >
-          Change Password
+          Change Email
         </h2>
 
         <Form {...form}>
@@ -115,6 +119,25 @@ const EditPasswordDialog = ({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="your.email@example.com"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="oldPassword"
@@ -125,44 +148,6 @@ const EditPasswordDialog = ({
                     <Input
                       type="password"
                       placeholder="Enter your current password"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Enter your new password"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm New Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Confirm your new password"
                       {...field}
                       disabled={isSubmitting}
                     />
@@ -205,5 +190,5 @@ const EditPasswordDialog = ({
   )
 }
 
-export default EditPasswordDialog
+export default EditEmailDialog
 

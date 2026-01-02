@@ -14,62 +14,54 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { apiPut } from '@/lib/api-client'
+import { apiDelete } from '@/lib/api-client'
+import { useRouter } from 'next/navigation'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
-const emailSchema = z.object({
-  email: z.string().email('Invalid email address').min(1, 'Email is required'),
-  oldPassword: z.string().min(1, 'Current password is required'),
-})
+const deleteAccountSchema = z
+  .object({
+    password: z.string().min(1, 'Password is required'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'The passwords you entered do not match',
+    path: ['confirmPassword'],
+  })
 
-type EmailFormValues = z.infer<typeof emailSchema>
+type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>
 
-interface EditEmailDialogProps {
+interface DeleteAccountDialogProps {
   isOpen: boolean
   onClose: () => void
-  currentEmail: string
-  onSuccess: () => void
 }
 
-const EditEmailDialog = ({
+const DeleteAccountDialog = ({
   isOpen,
   onClose,
-  currentEmail,
-  onSuccess,
-}: EditEmailDialogProps) => {
+}: DeleteAccountDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
-  const form = useForm<EmailFormValues>({
-    resolver: zodResolver(emailSchema),
+  const form = useForm<DeleteAccountFormValues>({
+    resolver: zodResolver(deleteAccountSchema),
     defaultValues: {
-      email: currentEmail,
-      oldPassword: '',
+      password: '',
+      confirmPassword: '',
     },
   })
 
-  const handleSubmit = async (values: EmailFormValues) => {
+  const handleSubmit = async (values: DeleteAccountFormValues) => {
     setIsSubmitting(true)
     setError(null)
 
     try {
-      // Only update if email changed
-      if (values.email === currentEmail) {
-        setError('Email is the same as current email')
-        setIsSubmitting(false)
-        return
-      }
+      await apiDelete('/api/auth/me', { password: values.password })
 
-      await apiPut('/api/auth/me', {
-        email: values.email,
-        oldPassword: values.oldPassword,
-      })
-
-      onSuccess()
-      form.reset()
-      onClose()
+      router.push('/login')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update email')
-    } finally {
+      const errorMessage = getOperationErrorMessage('delete', err)
+      setError(errorMessage)
       setIsSubmitting(false)
     }
   }
@@ -95,18 +87,30 @@ const EditEmailDialog = ({
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="edit-email-dialog-title"
+      aria-labelledby="delete-account-dialog-title"
     >
       <div
         className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
-          id="edit-email-dialog-title"
-          className="text-xl font-semibold"
+          id="delete-account-dialog-title"
+          className="text-xl font-semibold text-red-600 dark:text-red-400"
         >
-          Change Email
+          Delete Account
         </h2>
+
+        <div className="text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mb-2">
+            This action cannot be undone. This will permanently delete your
+            account and all associated data including:
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>All transactions</li>
+            <li>All budgets</li>
+            <li>Your profile information</li>
+          </ul>
+        </div>
 
         <Form {...form}>
           <form
@@ -115,14 +119,14 @@ const EditEmailDialog = ({
           >
             <FormField
               control={form.control}
-              name="email"
+              name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Email</FormLabel>
+                  <FormLabel>Confirm Password</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
-                      placeholder="your.email@example.com"
+                      type="password"
+                      placeholder="Enter your password to confirm"
                       {...field}
                       disabled={isSubmitting}
                     />
@@ -134,14 +138,14 @@ const EditEmailDialog = ({
 
             <FormField
               control={form.control}
-              name="oldPassword"
+              name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Password</FormLabel>
+                  <FormLabel>Re-enter Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Enter your current password"
+                      placeholder="Re-enter your password"
                       {...field}
                       disabled={isSubmitting}
                     />
@@ -173,8 +177,9 @@ const EditEmailDialog = ({
                 type="submit"
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
+                className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-800"
               >
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                {isSubmitting ? 'Deleting...' : 'Delete Account'}
               </Button>
             </div>
           </form>
@@ -184,5 +189,5 @@ const EditEmailDialog = ({
   )
 }
 
-export default EditEmailDialog
+export default DeleteAccountDialog
 
