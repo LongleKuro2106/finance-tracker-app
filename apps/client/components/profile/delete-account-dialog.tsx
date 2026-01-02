@@ -16,14 +16,15 @@ import {
 } from '@/components/ui/form'
 import { apiDelete } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const deleteAccountSchema = z
   .object({
     password: z.string().min(1, 'Password is required'),
-    confirmPassword: z.string().min(1, 'Password confirmation is required'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'The passwords you entered do not match',
     path: ['confirmPassword'],
   })
 
@@ -57,10 +58,10 @@ const DeleteAccountDialog = ({
     try {
       await apiDelete('/api/auth/me', { password: values.password })
 
-      // API route already clears cookies, just redirect to login
       router.push('/login')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete account')
+      const errorMessage = getOperationErrorMessage('delete', err)
+      setError(errorMessage)
       setIsSubmitting(false)
     }
   }

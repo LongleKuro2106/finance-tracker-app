@@ -16,11 +16,32 @@ import {
 } from '@/components/ui/form'
 import type { Budget } from './budget-card'
 import { apiPost, apiPut } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const budgetSchema = z.object({
-  month: z.number().min(1).max(12),
-  year: z.number().min(2000).max(2100),
-  amount: z.number().min(0, 'Amount must be greater than or equal to 0'),
+  month: z
+    .number({
+      required_error: 'Month is required',
+      invalid_type_error: 'Month must be a valid number',
+    })
+    .int('Month must be a whole number')
+    .min(1, 'Month must be between 1 and 12')
+    .max(12, 'Month must be between 1 and 12'),
+  year: z
+    .number({
+      required_error: 'Year is required',
+      invalid_type_error: 'Year must be a valid number',
+    })
+    .int('Year must be a whole number')
+    .min(2000, 'Year must be 2000 or later')
+    .max(2100, 'Year must be 2100 or earlier'),
+  amount: z
+    .number({
+      required_error: 'Amount is required',
+      invalid_type_error: 'Amount must be a valid number',
+    })
+    .min(0.01, 'Budget amount must be greater than 0')
+    .max(999999999.99, 'Amount exceeds maximum allowed value'),
 })
 
 type BudgetFormValues = z.infer<typeof budgetSchema>
@@ -81,7 +102,11 @@ const BudgetForm = ({
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save budget')
+      const errorMessage = getOperationErrorMessage(
+        budget ? 'update' : 'create',
+        err,
+      )
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

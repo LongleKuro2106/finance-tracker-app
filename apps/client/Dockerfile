@@ -22,8 +22,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Accept build argument for API base URL
-# Defaults to http://server:8000 for Docker, but can be overridden
-ARG NEXT_PUBLIC_API_BASE_URL=http://server:8000
+# This is used for client-side code and CSP headers
+# Should be set to the host-accessible URL (e.g., http://localhost:8000)
+# Server-side code uses API_BASE_URL env var (set at runtime) for Docker internal networking
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 # Set environment variables for build
 ENV NEXT_TELEMETRY_DISABLED=1

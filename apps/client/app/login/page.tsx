@@ -9,10 +9,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/shared/toast'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const LoginSchema = z.object({
-  usernameOrEmail: z.string().min(1, 'Username or email is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  usernameOrEmail: z
+    .string()
+    .min(1, 'Username or email is required')
+    .trim(),
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .min(6, 'Password must be at least 6 characters long'),
 })
 
 type LoginValues = z.infer<typeof LoginSchema>
@@ -32,27 +39,37 @@ const LoginPage = () => {
 
   const onSubmit = async (values: LoginValues) => {
     setSubmitError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      const errorMessage = data?.message ?? 'Login failed'
-      setSubmitError(errorMessage)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
 
-      // Show toast notification for better visibility
-      if (res.status === 429) {
-        showToast(errorMessage, 'warning', 8000)
-      } else {
-        showToast(errorMessage, 'error', 5000)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const errorMessage = getOperationErrorMessage('login', {
+          message: data?.message ?? '',
+          status: res.status,
+        })
+        setSubmitError(errorMessage)
+
+        if (res.status === 429) {
+          showToast(errorMessage, 'warning', 8000)
+        } else {
+          showToast(errorMessage, 'error', 5000)
+        }
+        return
       }
-      return
+
+      showToast('Login successful!', 'success', 2000)
+      router.replace('/dashboard')
+      router.refresh()
+    } catch (err) {
+      const errorMessage = getOperationErrorMessage('login', err)
+      setSubmitError(errorMessage)
+      showToast(errorMessage, 'error', 5000)
     }
-    showToast('Login successful!', 'success', 2000)
-    router.replace('/dashboard')
-    router.refresh()
   }
 
   return (

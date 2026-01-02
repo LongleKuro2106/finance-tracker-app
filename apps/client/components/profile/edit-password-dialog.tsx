@@ -15,19 +15,25 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { apiPut } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const passwordSchema = z
   .object({
     oldPassword: z.string().min(1, 'Current password is required'),
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters')
+      .min(1, 'New password is required')
+      .min(6, 'Password must be at least 6 characters long')
       .max(72, 'Password must be less than 72 characters'),
-    confirmPassword: z.string().min(1, 'Password confirmation is required'),
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'The passwords you entered do not match',
     path: ['confirmPassword'],
+  })
+  .refine((data) => data.password !== data.oldPassword, {
+    message: 'New password must be different from your current password',
+    path: ['password'],
   })
 
 type PasswordFormValues = z.infer<typeof passwordSchema>
@@ -70,7 +76,8 @@ const EditPasswordDialog = ({
       form.reset()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update password')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

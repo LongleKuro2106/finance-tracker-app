@@ -16,15 +16,25 @@ import {
 } from '@/components/ui/form'
 import CategorySelector from './category-selector'
 import { apiPost } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const transactionSchema = z.object({
-  amount: z.number().min(0, 'Amount must be greater than or equal to 0'),
+  amount: z
+    .number({
+      required_error: 'Amount is required',
+      invalid_type_error: 'Amount must be a valid number',
+    })
+    .min(0.01, 'Amount must be greater than 0')
+    .max(999999999.99, 'Amount exceeds maximum allowed value'),
   date: z.string().min(1, 'Date is required'),
   type: z.enum(['income', 'expense'], {
     required_error: 'Transaction type is required',
   }),
   categoryName: z.string().optional(),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(500, 'Description must be less than 500 characters')
+    .optional(),
 })
 
 type TransactionFormValues = z.infer<typeof transactionSchema>
@@ -69,18 +79,17 @@ const AddTransactionForm = ({
         description: values.description || undefined,
       })
 
-      // Reset form and handle success
       form.reset()
       onSuccess()
       if (asPage) {
-        // If it's a page, onSuccess will handle navigation
         return
       }
       if (onClose) {
         onClose()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create transaction')
+      const errorMessage = getOperationErrorMessage('create', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

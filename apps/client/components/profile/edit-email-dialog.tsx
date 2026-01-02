@@ -15,9 +15,15 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { apiPut } from '@/lib/api-client'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const emailSchema = z.object({
-  email: z.string().email('Invalid email address').min(1, 'Email is required'),
+  email: z
+    .string()
+    .min(1, 'Email address is required')
+    .email('Please enter a valid email address')
+    .trim()
+    .toLowerCase(),
   oldPassword: z.string().min(1, 'Current password is required'),
 })
 
@@ -52,9 +58,8 @@ const EditEmailDialog = ({
     setError(null)
 
     try {
-      // Only update if email changed
       if (values.email === currentEmail) {
-        setError('Email is the same as current email')
+        setError('The new email address must be different from your current email')
         setIsSubmitting(false)
         return
       }
@@ -68,7 +73,8 @@ const EditEmailDialog = ({
       form.reset()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update email')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

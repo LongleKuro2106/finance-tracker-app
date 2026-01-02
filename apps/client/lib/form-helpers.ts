@@ -1,11 +1,8 @@
 /**
  * Form Helper Utilities
  *
- * Reusable form submission logic with:
- * - Error handling
- * - Loading states
- * - CSRF protection
- * - Type safety
+ * Reusable form submission logic with error handling, loading states,
+ * CSRF protection, and type safety.
  */
 
 import { useState, type FormEvent } from 'react'
@@ -27,8 +24,7 @@ export interface UseFormSubmitReturn {
 }
 
 /**
- * Reusable form submission hook
- * Handles loading states, errors, and API calls securely
+ * Reusable form submission hook that handles loading states, errors, and API calls securely
  */
 export function useFormSubmit<T = unknown>(
   options: UseFormSubmitOptions<T>,
@@ -70,6 +66,9 @@ export function useFormSubmit<T = unknown>(
     }
   }
 
+  /**
+   * Clears the current error state
+   */
   const clearError = () => {
     setError(null)
   }

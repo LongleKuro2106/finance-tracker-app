@@ -35,7 +35,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${SERVER_PORT}
-      HOST: ${SERVER_HOST}
+      # HOST defaults to 0.0.0.0 in main.ts (correct for Docker)
+      # Only set HOST if SERVER_HOST is explicitly provided and not empty
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -63,7 +64,10 @@ services:
       context: ./apps/client
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        # NEXT_PUBLIC_API_BASE_URL is baked into the client bundle at build time
+        # Set this to the host-accessible URL (e.g., http://localhost:8000)
+        # This is used for client-side code and CSP headers
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     container_name: finance-tracker-client
     restart: unless-stopped
     depends_on:
@@ -75,9 +79,11 @@ services:
       SECURE_COOKIES: ${SECURE_COOKIES}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       PORT: ${CLIENT_PORT}
-      HOSTNAME: ${CLIENT_HOST}
+      # API_BASE_URL is used server-side (Next.js API routes) for Docker internal networking
+      # This allows server-side code to communicate with backend using Docker service name
+      API_BASE_URL: http://server:8000
+      # HOSTNAME defaults to 0.0.0.0 in Dockerfile, which is correct for Docker
       # Cookie names (optional - defaults to 'access_token' and 'refresh_token' for dev)
-      # For production, use obscure names like 'at' and 'rt' for better security appearance
       ACCESS_TOKEN_COOKIE_NAME: ${ACCESS_TOKEN_COOKIE_NAME:-}
       REFRESH_TOKEN_COOKIE_NAME: ${REFRESH_TOKEN_COOKIE_NAME:-}
     ports:

@@ -169,6 +169,7 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 - CORS configuration with environment-based origins
 - Request deduplication (prevents duplicate API calls)
 - Token refresh caching (reduces unnecessary refresh calls)
+- User-friendly error messages without exposing server internals
 
 ## ⚡ Performance Optimizations
 
@@ -197,7 +198,8 @@ finance-tracker-app/
 │   │   ├── app/     # App Router pages and API routes
 │   │   ├── components/  # React components
 │   │   ├── hooks/   # Custom React hooks
-│   │   └── lib/     # Utility functions and API client
+│   │   ├── lib/     # Utility functions and API client
+│   │   └── __tests__/  # Test files
 │   └── server/      # NestJS backend API
 │       ├── src/     # Source code
 │       └── prisma/  # Database schema and migrations
@@ -207,6 +209,20 @@ finance-tracker-app/
 ├── README.md        # This file
 └── INSTALLATION.md  # Installation guide
 ```
+
+## 🐳 Docker Configuration
+
+The application uses Docker Compose for containerized deployment. Key configuration points:
+
+- **Server Binding**: Defaults to `0.0.0.0` (all interfaces) - correct for Docker
+- **Client Binding**: Defaults to `0.0.0.0` (all interfaces) - correct for Docker
+- **API Communication**:
+  - Server-side (Next.js API routes): Uses `API_BASE_URL=http://server:8000` (Docker internal networking)
+  - Client-side: Uses `NEXT_PUBLIC_API_BASE_URL` (host-accessible URL, baked at build time)
+- **CORS**: Configured via `ALLOWED_ORIGINS` environment variable
+- **Port Mapping**: Configured via `SERVER_PORT` and `CLIENT_PORT` environment variables
+
+See [INSTALLATION.md](./INSTALLATION.md) for detailed Docker setup instructions.
 
 ## 📚 Learning Objectives
 
@@ -237,8 +253,15 @@ For detailed installation instructions, see [INSTALLATION.md](./INSTALLATION.md)
 
 Or use Docker:
 ```bash
+# Set up .env file first (see INSTALLATION.md for details)
 docker-compose up --build
 ```
+
+**Important Docker Configuration:**
+- `NEXT_PUBLIC_API_BASE_URL` should be set to the **host-accessible URL** (e.g., `http://localhost:8000`)
+- `ALLOWED_ORIGINS` must match the URL you use to access the frontend (e.g., `http://localhost:3000`)
+- `API_BASE_URL` is automatically set to `http://server:8000` for server-side Docker networking
+- See [INSTALLATION.md](./INSTALLATION.md) for detailed Docker setup instructions
 
 ## 📝 License
 

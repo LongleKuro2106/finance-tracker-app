@@ -8,16 +8,31 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
-const SignupSchema = z.object({
-  username: z.string().min(2, 'Username must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Confirm your password'),
-}).refine((v) => v.password === v.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-})
+const SignupSchema = z
+  .object({
+    username: z
+      .string()
+      .min(1, 'Username is required')
+      .min(2, 'Username must be at least 2 characters long')
+      .trim(),
+    email: z
+      .string()
+      .min(1, 'Email address is required')
+      .email('Please enter a valid email address')
+      .trim()
+      .toLowerCase(),
+    password: z
+      .string()
+      .min(1, 'Password is required')
+      .min(6, 'Password must be at least 6 characters long'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'The passwords you entered do not match',
+    path: ['confirmPassword'],
+  })
 
 type SignupValues = z.infer<typeof SignupSchema>
 
@@ -35,17 +50,28 @@ const SignupPage = () => {
 
   const onSubmit = async (values: SignupValues) => {
     setSubmitError('')
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      setSubmitError(data?.message ?? 'Signup failed')
-      return
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const errorMessage = getOperationErrorMessage('signup', {
+          message: data?.message ?? '',
+          status: res.status,
+        })
+        setSubmitError(errorMessage)
+        return
+      }
+
+      router.replace('/login')
+    } catch (err) {
+      const errorMessage = getOperationErrorMessage('signup', err)
+      setSubmitError(errorMessage)
     }
-    router.replace('/login')
   }
 
   return (

@@ -17,15 +17,25 @@ import {
 import CategorySelector from './category-selector'
 import { apiPut } from '@/lib/api-client'
 import type { Transaction } from '@/lib/utils'
+import { getOperationErrorMessage } from '@/lib/error-handler'
 
 const transactionSchema = z.object({
-  amount: z.number().min(0, 'Amount must be greater than or equal to 0'),
+  amount: z
+    .number({
+      required_error: 'Amount is required',
+      invalid_type_error: 'Amount must be a valid number',
+    })
+    .min(0.01, 'Amount must be greater than 0')
+    .max(999999999.99, 'Amount exceeds maximum allowed value'),
   date: z.string().min(1, 'Date is required'),
   type: z.enum(['income', 'expense'], {
     required_error: 'Transaction type is required',
   }),
   categoryName: z.string().optional(),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(500, 'Description must be less than 500 characters')
+    .optional(),
 })
 
 type TransactionFormValues = z.infer<typeof transactionSchema>
@@ -46,7 +56,9 @@ const EditTransactionForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Format date to YYYY-MM-DD for date input
+  /**
+   * Formats date string to YYYY-MM-DD format for HTML date input
+   */
   const formatDateForInput = (dateString: string) => {
     const date = new Date(dateString)
     return date.toISOString().split('T')[0]
@@ -65,7 +77,9 @@ const EditTransactionForm = ({
     },
   })
 
-  // Reset form when transaction changes
+  /**
+   * Resets form values when transaction prop changes or dialog opens
+   */
   useEffect(() => {
     if (isOpen && transaction) {
       form.reset({
@@ -93,12 +107,12 @@ const EditTransactionForm = ({
         description: values.description || undefined,
       })
 
-      // Reset form and close modal
       form.reset()
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update transaction')
+      const errorMessage = getOperationErrorMessage('update', err)
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
