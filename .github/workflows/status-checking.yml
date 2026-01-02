@@ -48,13 +48,26 @@ jobs:
           node-version: '24.11.0'
       - name: Install dependencies
         run: |
-          npm ci
+          # Install dependencies including optional dependencies (SWC binaries)
+          npm ci --include=optional
+      - name: Install Next.js SWC binaries for Linux
+        run: |
+          # Next.js Jest transformer requires SWC binaries for Linux x64
+          # Install them explicitly in the client workspace to ensure availability in CI
+          cd apps/client
+          echo "Installing Next.js SWC binaries for Linux x64..."
+          # Install SWC packages - Next.js version must match the installed Next.js version
+          npm install --save-optional --no-save @next/swc-linux-x64-gnu@^16.0.10 @next/swc-linux-x64-musl@^16.0.10
+          echo "Verifying SWC binaries installation..."
+          ls -la node_modules/@next/swc-linux-x64-* 2>/dev/null || echo "SWC packages location check"
       - name: Run client tests
         env:
           # NEXT_PUBLIC_API_BASE_URL is optional - tests mock API calls
           NEXT_PUBLIC_API_BASE_URL: 'http://localhost:8000'
           # INTERNAL_SECRET required for server-to-server authentication in API routes
           INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET_TEST || 'test_internal_secret_for_ci_fallback' }}
+          # Help Next.js find SWC binaries
+          NEXT_SKIP_SWC_BINARY_DOWNLOAD: 'false'
         run: |
           cd apps/client
           npm test -- --passWithNoTests --ci --coverage=false
