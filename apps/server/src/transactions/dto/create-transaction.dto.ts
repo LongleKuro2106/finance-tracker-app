@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { TransactionType } from '@prisma/client';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
 export class CreateTransactionDto {
   @IsNumber()
@@ -31,7 +31,10 @@ export class CreateTransactionDto {
   @IsString()
   @Transform(({ value }) => {
     if (typeof value === 'string' && value) {
-      return DOMPurify.sanitize(value);
+      return sanitizeHtml(value, {
+        allowedTags: [],
+        allowedAttributes: {},
+      });
     }
     return undefined;
   })

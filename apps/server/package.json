@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "vercel-build": "prisma generate && npm run build",
+    "vercel-build": "prisma generate && npm run build && (prisma migrate deploy || true) && (prisma db seed || true)",
     "check-types": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/src/main",
@@ -34,8 +34,8 @@
     "class-validator": "^0.14.2",
     "cors": "^2.8.5",
     "helmet": "^8.1.0",
-    "isomorphic-dompurify": "^2.33.0",
     "passport": "^0.7.0",
+    "sanitize-html": "^2.11.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

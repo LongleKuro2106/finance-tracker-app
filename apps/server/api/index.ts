@@ -3,10 +3,10 @@ import { AppModule } from '../src/app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import * as express from 'express';
+import express from 'express';
 import cors from 'cors';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import type { Request } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 let cachedApp: express.Application;
 
@@ -61,7 +61,7 @@ async function createApp(): Promise<express.Application> {
   // CORS preflight requests are identified by the Access-Control-Request-Method header
   // This reduces attack surface by blocking non-standard OPTIONS usage
   expressApp.use(
-    (req: Request, res: express.Response, next: express.NextFunction) => {
+    (req: Request, res: Response, next: NextFunction) => {
       if (req.method === 'OPTIONS') {
         // Validate preflight request per CORS specification (RFC 6454)
         // Legitimate preflight requests include Access-Control-Request-Method header
@@ -82,7 +82,7 @@ async function createApp(): Promise<express.Application> {
   // Internal request authentication middleware: executes before CORS middleware
   // Validates server-to-server requests using shared secret authentication
   expressApp.use(
-    (req: Request, res: express.Response, next: express.NextFunction) => {
+    (req: Request, res: Response, next: NextFunction) => {
       // Authenticate internal requests via X-Internal-Secret header
       // Prevents header spoofing by external clients
       const providedSecret = req.headers['x-internal-secret'];
@@ -163,7 +163,7 @@ async function createApp(): Promise<express.Application> {
   // Conditional CORS middleware application
   // Skip CORS processing for requests already handled by internal request middleware
   expressApp.use(
-    (req: Request, res: express.Response, next: express.NextFunction) => {
+    (req: Request, res: Response, next: NextFunction) => {
       // Bypass CORS middleware if request was processed by internal request handler
       if ((req as Request & { corsHandled?: boolean }).corsHandled === true) {
         return next();
@@ -225,8 +225,8 @@ async function createApp(): Promise<express.Application> {
  * This function is called for each request to the serverless function.
  */
 export default async function handler(
-  req: express.Request,
-  res: express.Response,
+  req: Request,
+  res: Response,
 ): Promise<void> {
   const app = await createApp();
   app(req, res);
