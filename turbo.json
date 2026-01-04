@@ -10,7 +10,8 @@
         "DATABASE_URL",
         "JWT_SECRET",
         "REFRESH_SECRET",
-        "INTERNAL_SECRET"
+        "INTERNAL_SECRET",
+        "SECURE_COOKIES"
       ]
     },
     "check-types": {
