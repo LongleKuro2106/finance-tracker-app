@@ -6,10 +6,6 @@ import * as express from 'express';
 import cors from 'cors';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { Request } from 'express';
-import {
-  HttpExceptionFilter,
-  NotFoundExceptionFilter,
-} from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -180,14 +176,6 @@ async function bootstrap() {
         enableImplicitConversion: true, // Enable automatic type coercion
       },
     }),
-  );
-
-  // Global exception filters: consistent error response formatting
-  // NotFoundExceptionFilter handles 404 responses for non-existent endpoints
-  // HttpExceptionFilter handles all other HTTP exceptions
-  app.useGlobalFilters(
-    new NotFoundExceptionFilter(),
-    new HttpExceptionFilter(),
   );
 
   // Security headers middleware: HTTP security policy enforcement
