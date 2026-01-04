@@ -3,7 +3,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**", "!.next/cache/**"]
+      "outputs": [".next/**", "dist/**", "!.next/cache/**"],
+      "env": [
+        "NEXT_PUBLIC_API_BASE_URL",
+        "NODE_ENV",
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "REFRESH_SECRET",
+        "INTERNAL_SECRET"
+      ]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
