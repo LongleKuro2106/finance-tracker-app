@@ -68,12 +68,37 @@ export function AnalyticsProvider({
 
   // Cache for analytics data to prevent over-fetching
   const lastFetchRef = useRef<number>(0)
+  const dataCacheRef = useRef<{
+    data: {
+      monthlyData: MonthlyData[] | null
+      overviewData: OverviewData | null
+      categoriesData: CategoryData[] | null
+      dailyData: DailyData[] | null
+    }
+    timestamp: number
+  } | null>(null)
   const CACHE_DURATION = 60000 // 60 seconds cache for analytics
+  const DEBOUNCE_MS = 1000 // 1 second debounce
 
   const fetchAnalytics = async () => {
-    // Prevent rapid successive calls (debounce)
     const now = Date.now()
-    if (now - lastFetchRef.current < 1000) {
+
+    // Use cached data if still valid
+    if (dataCacheRef.current) {
+      const cacheAge = now - dataCacheRef.current.timestamp
+      if (cacheAge < CACHE_DURATION) {
+        // Update state with cached data without fetching
+        setMonthlyData(dataCacheRef.current.data.monthlyData)
+        setOverviewData(dataCacheRef.current.data.overviewData)
+        setCategoriesData(dataCacheRef.current.data.categoriesData)
+        setDailyData(dataCacheRef.current.data.dailyData)
+        setLoading(false)
+        return
+      }
+    }
+
+    // Prevent rapid successive calls (debounce)
+    if (now - lastFetchRef.current < DEBOUNCE_MS) {
       return // Skip if called within 1 second
     }
     lastFetchRef.current = now
@@ -92,17 +117,34 @@ export function AnalyticsProvider({
       ])
 
       // Process results, keeping existing data on error
+      const newData = {
+        monthlyData: dataCacheRef.current?.data.monthlyData ?? null,
+        overviewData: dataCacheRef.current?.data.overviewData ?? null,
+        categoriesData: dataCacheRef.current?.data.categoriesData ?? null,
+        dailyData: dataCacheRef.current?.data.dailyData ?? null,
+      }
+
       if (results[0].status === 'fulfilled') {
+        newData.monthlyData = results[0].value
         setMonthlyData(results[0].value)
       }
       if (results[1].status === 'fulfilled') {
+        newData.overviewData = results[1].value
         setOverviewData(results[1].value)
       }
       if (results[2].status === 'fulfilled') {
+        newData.categoriesData = results[2].value
         setCategoriesData(results[2].value)
       }
       if (results[3].status === 'fulfilled') {
+        newData.dailyData = results[3].value
         setDailyData(results[3].value)
+      }
+
+      // Update cache with fetched data
+      dataCacheRef.current = {
+        data: newData,
+        timestamp: Date.now(),
       }
 
       // Check for errors
@@ -171,7 +213,19 @@ export function AnalyticsProvider({
   }
 
   useEffect(() => {
-    fetchAnalytics()
+    // Debounce refresh key changes to prevent rapid refetches
+    const timeoutId = setTimeout(() => {
+      if (refreshKey > 0) {
+        // Clear cache to force refresh only when refreshKey actually changes
+        dataCacheRef.current = null
+        fetchAnalytics()
+      } else {
+        // Use cache if available, otherwise fetch (only on initial mount)
+        fetchAnalytics()
+      }
+    }, 100) // Small delay to batch multiple refresh key changes
+
+    return () => clearTimeout(timeoutId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 

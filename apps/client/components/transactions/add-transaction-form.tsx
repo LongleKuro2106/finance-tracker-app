@@ -293,6 +293,7 @@ const AddTransactionForm = ({
                 type="submit"
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
+                className="bg-success text-success-foreground hover:opacity-90"
               >
                 {isSubmitting ? 'Adding...' : 'Add Transaction'}
               </Button>

@@ -232,7 +232,11 @@ const BudgetForm = ({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className={budget ? "bg-info text-info-foreground hover:opacity-90" : "bg-success text-success-foreground hover:opacity-90"}
+              >
                 {isSubmitting ? 'Saving...' : budget ? 'Update' : 'Create'}
               </Button>
             </div>

@@ -314,6 +314,7 @@ const EditTransactionForm = ({
                 type="submit"
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
+                className="bg-info text-info-foreground hover:opacity-90"
               >
                 {isSubmitting ? 'Updating...' : 'Update Transaction'}
               </Button>

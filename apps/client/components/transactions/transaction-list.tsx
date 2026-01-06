@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense, useRef } from 'react'
 import type { Transaction } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { formatCategoryDisplayParts } from '@/lib/category-utils'
-import EditTransactionForm from './edit-transaction-form'
 import DeleteConfirmationDialog from './delete-confirmation-dialog'
 import { useTransactions } from '@/hooks/use-transactions'
+
+// Lazy load form component for better code splitting
+const EditTransactionForm = lazy(() => import('./edit-transaction-form'))
 
 interface TransactionListProps {
   refreshKey?: number
@@ -157,7 +159,7 @@ const TransactionItem = memo(
 
 TransactionItem.displayName = 'TransactionItem'
 
-const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
+const TransactionList = memo(({ refreshKey, onRefresh }: TransactionListProps) => {
   const {
     transactions,
     loading,
@@ -172,12 +174,24 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Refetch when refreshKey changes
+  // Track previous refresh key to prevent unnecessary refetches
+  const prevRefreshKeyRef = useRef<number | undefined>(undefined)
+
+  // Refetch when refreshKey changes (but debounce to prevent rapid refetches)
   useEffect(() => {
-    if (refreshKey !== undefined) {
-      refetch()
+    // Only refetch if refreshKey actually changed and is > 0
+    if (refreshKey !== undefined && refreshKey > 0 && refreshKey !== prevRefreshKeyRef.current) {
+      prevRefreshKeyRef.current = refreshKey
+
+      // Debounce to batch multiple refresh key changes
+      const timeoutId = setTimeout(() => {
+        refetch()
+      }, 200) // Increased delay to batch changes better
+
+      return () => clearTimeout(timeoutId)
     }
-  }, [refreshKey, refetch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]) // Don't include refetch in deps to avoid unnecessary re-runs
 
   const handleEdit = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction)
@@ -262,12 +276,14 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
       </div>
 
       {editingTransaction && (
-        <EditTransactionForm
-          isOpen={!!editingTransaction}
-          onClose={() => setEditingTransaction(null)}
-          onSuccess={handleEditSuccess}
-          transaction={editingTransaction}
-        />
+        <Suspense fallback={<div className="text-center p-4">Loading form...</div>}>
+          <EditTransactionForm
+            isOpen={!!editingTransaction}
+            onClose={() => setEditingTransaction(null)}
+            onSuccess={handleEditSuccess}
+            transaction={editingTransaction}
+          />
+        </Suspense>
       )}
 
       {deletingTransaction && (
@@ -283,7 +299,9 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
       )}
     </>
   )
-}
+})
+
+TransactionList.displayName = 'TransactionList'
 
 export default TransactionList
 

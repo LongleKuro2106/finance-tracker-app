@@ -1,4 +1,4 @@
-import { secureApiRequest, apiGet, apiPost, apiPut, apiDelete, ApiError } from '@/lib/api-client'
+import { secureApiRequest, apiGet, apiPost, apiPut, apiDelete, ApiError, invalidateCache } from '@/lib/api-client'
 
 // Mock fetch globally
 global.fetch = jest.fn()
@@ -6,6 +6,8 @@ global.fetch = jest.fn()
 describe('api-client', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Clear cache before each test to ensure fresh state
+    invalidateCache()
   })
 
   describe('secureApiRequest', () => {
@@ -24,7 +26,8 @@ describe('api-client', () => {
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',
-          cache: 'no-store',
+          cache: 'default', // Changed from 'no-store' to 'default' for GET requests
+          next: expect.objectContaining({ revalidate: 30 }),
         }),
       )
     })
@@ -64,14 +67,14 @@ describe('api-client', () => {
     })
 
     it('should deduplicate concurrent GET requests', async () => {
-      const mockData = { id: 1 }
+      const mockData = { id: 1, name: 'Test' }
       ;(global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => mockData,
       })
 
-      const promise1 = secureApiRequest('/api/test')
-      const promise2 = secureApiRequest('/api/test')
+      const promise1 = secureApiRequest<typeof mockData>('/api/test')
+      const promise2 = secureApiRequest<typeof mockData>('/api/test')
 
       const [result1, result2] = await Promise.all([promise1, promise2])
 
@@ -98,12 +101,16 @@ describe('api-client', () => {
     })
 
     it('should handle 429 rate limit error', async () => {
+      // Clear cache to ensure error is not cached
+      invalidateCache()
+
       const mockHeaders = {
         get: jest.fn((name: string) => (name === 'Retry-After' ? '60' : null)),
       }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 429,
+        statusText: 'Too Many Requests',
         headers: mockHeaders,
         json: async () => ({ message: 'Too many requests' }),
       })
@@ -116,12 +123,16 @@ describe('api-client', () => {
     })
 
     it('should handle 401 unauthorized error', async () => {
+      // Clear cache to ensure error is not cached
+      invalidateCache()
+
       const mockHeaders = {
         get: jest.fn(() => null),
       }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
+        statusText: 'Unauthorized',
         headers: mockHeaders,
         json: async () => ({ message: 'Unauthorized' }),
       })
@@ -133,6 +144,9 @@ describe('api-client', () => {
     })
 
     it('should handle non-JSON error response', async () => {
+      // Clear cache to ensure error is not cached
+      invalidateCache()
+
       const mockHeaders = {
         get: jest.fn(() => null),
       }
@@ -141,6 +155,9 @@ describe('api-client', () => {
         status: 500,
         statusText: 'Internal Server Error',
         headers: mockHeaders,
+        json: async () => {
+          throw new Error('Not JSON')
+        },
       })
 
       await expect(secureApiRequest('/api/test')).rejects.toMatchObject<ApiError>({
@@ -150,6 +167,9 @@ describe('api-client', () => {
     })
 
     it('should include custom headers', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({}),
@@ -173,6 +193,9 @@ describe('api-client', () => {
 
   describe('apiGet', () => {
     it('should make GET request', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: 'test' }),
@@ -188,6 +211,9 @@ describe('api-client', () => {
 
   describe('apiPost', () => {
     it('should make POST request with body', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       const body = { name: 'Test' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -207,6 +233,9 @@ describe('api-client', () => {
 
   describe('apiPut', () => {
     it('should make PUT request with body', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       const body = { name: 'Updated' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -226,6 +255,9 @@ describe('api-client', () => {
 
   describe('apiDelete', () => {
     it('should make DELETE request', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 204,
@@ -239,6 +271,9 @@ describe('api-client', () => {
     })
 
     it('should make DELETE request with body', async () => {
+      // Clear cache to ensure fresh request
+      invalidateCache()
+
       const body = { reason: 'test' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,

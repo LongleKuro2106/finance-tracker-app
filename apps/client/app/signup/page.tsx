@@ -78,7 +78,7 @@ const SignupPage = () => {
     <div className="min-h-screen flex items-center justify-center p-6">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 space-y-4"
+        className="w-full max-w-sm neomorphic-card border-enhanced p-6 space-y-4"
         aria-label="Signup form"
       >
         <h1 className="text-xl font-semibold">Sign up</h1>
@@ -135,7 +135,7 @@ const SignupPage = () => {
             <p id="confirmPassword-error" className="text-xs text-red-600 mt-1">{errors.confirmPassword.message}</p>
           )}
         </label>
-        <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="w-full bg-success text-success-foreground hover:opacity-90">
           {isSubmitting ? 'Signing up...' : 'Sign up'}
         </Button>
         <div className="text-sm text-neutral-600 dark:text-neutral-400">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { useAnalytics } from '@/lib/analytics-context'
 import {
   LineChart,
@@ -17,7 +17,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 
-const MonthlySpendingChart = () => {
+const MonthlySpendingChart = memo(() => {
   const { dailyData, loading, error } = useAnalytics()
 
   const chartConfig = {
@@ -125,7 +125,9 @@ const MonthlySpendingChart = () => {
       </ChartContainer>
     </div>
   )
-}
+})
+
+MonthlySpendingChart.displayName = 'MonthlySpendingChart'
 
 export default MonthlySpendingChart
 

@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense, memo } from 'react'
 import type { Budget } from './budget-card'
 import BudgetCard from './budget-card'
-import BudgetForm from './budget-form'
 import DeleteBudgetDialog from './delete-budget-dialog'
 import { useBudgets } from '@/hooks/use-budgets'
 import { useDialog } from '@/hooks/use-dialog'
+
+// Lazy load form component for better code splitting
+const BudgetForm = lazy(() => import('./budget-form'))
 
 interface BudgetListProps {
   refreshKey?: number
   onRefresh?: () => void
 }
 
-const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
+const BudgetList = memo(({ refreshKey, onRefresh }: BudgetListProps) => {
   const {
     budgets,
     loading,
@@ -30,12 +32,18 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
   const formDialog = useDialog()
 
-  // Refetch when refreshKey changes
+  // Refetch when refreshKey changes (but debounce to prevent rapid refetches)
   useEffect(() => {
-    if (refreshKey !== undefined) {
-      refetch()
+    if (refreshKey !== undefined && refreshKey > 0) {
+      // Only refetch if refreshKey actually changed (not initial mount)
+      const timeoutId = setTimeout(() => {
+        refetch()
+      }, 100) // Small delay to batch multiple refresh key changes
+
+      return () => clearTimeout(timeoutId)
     }
-  }, [refreshKey, refetch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]) // Don't include refetch in deps to avoid unnecessary re-runs
 
   const handleEdit = useCallback((budget: Budget) => {
     setEditingBudget(budget)
@@ -135,12 +143,14 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
       </div>
 
       {formDialog.isOpen && (
-        <BudgetForm
-          isOpen={formDialog.isOpen}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
-          budget={editingBudget}
-        />
+        <Suspense fallback={<div className="text-center p-4">Loading form...</div>}>
+          <BudgetForm
+            isOpen={formDialog.isOpen}
+            onClose={handleFormClose}
+            onSuccess={handleFormSuccess}
+            budget={editingBudget}
+          />
+        </Suspense>
       )}
 
       {deletingBudget && (
@@ -156,7 +166,9 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
       )}
     </>
   )
-}
+})
+
+BudgetList.displayName = 'BudgetList'
 
 export default BudgetList
 

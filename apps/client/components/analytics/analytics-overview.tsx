@@ -1,17 +1,20 @@
 'use client'
 
+import { useMemo, memo } from 'react'
 import { useAnalytics } from '@/lib/analytics-context'
 
-const AnalyticsOverview = () => {
+const AnalyticsOverview = memo(() => {
   const { overviewData, loading, error } = useAnalytics()
   const data = overviewData
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount)
-  }
+  const formatAmount = useMemo(() => {
+    return (amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(amount)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -75,7 +78,9 @@ const AnalyticsOverview = () => {
       </div>
     </div>
   )
-}
+})
+
+AnalyticsOverview.displayName = 'AnalyticsOverview'
 
 export default AnalyticsOverview
 

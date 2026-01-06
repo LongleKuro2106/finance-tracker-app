@@ -1,18 +1,18 @@
 'use client'
 
 import { useState, useCallback, lazy, Suspense, memo } from 'react'
-import { DashboardTopbar } from '../dashboard/dashboard-topbar'
-import BudgetList from './budget-list'
+import { DashboardTopbar } from '@/components/dashboard/dashboard-topbar'
+import TransactionList from './transaction-list'
 import { Button } from '@/components/ui/button'
 
 // Lazy load form component for better code splitting
-const BudgetForm = lazy(() => import('./budget-form'))
+const AddTransactionForm = lazy(() => import('./add-transaction-form'))
 
-interface BudgetsWrapperProps {
+interface TransactionsWrapperProps {
   username: string
 }
 
-const BudgetsWrapper = memo(({ username }: BudgetsWrapperProps) => {
+const TransactionsWrapper = memo(({ username }: TransactionsWrapperProps) => {
   const [refreshKey, setRefreshKey] = useState(0)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
@@ -42,23 +42,25 @@ const BudgetsWrapper = memo(({ username }: BudgetsWrapperProps) => {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-3xl font-bold">Budgets</h1>
+                <h1 className="text-3xl font-bold">Transactions</h1>
                 <p className="text-muted-foreground mt-1">
-                  Manage your monthly spending limits
+                  View and manage all your transactions
                 </p>
               </div>
               <Button onClick={handleFormOpen} className="bg-success text-success-foreground hover:opacity-90">
-                Create Budget
+                Add Transaction
               </Button>
             </div>
 
-            {/* Budgets List */}
-            <BudgetList refreshKey={refreshKey} onRefresh={handleRefresh} />
+            {/* Transactions List */}
+            <div className="neomorphic-card border-enhanced p-6">
+              <TransactionList refreshKey={refreshKey} onRefresh={handleRefresh} />
+            </div>
 
-            {/* Create Budget Form */}
+            {/* Add Transaction Form */}
             {isFormOpen && (
               <Suspense fallback={<div className="text-center p-4">Loading form...</div>}>
-                <BudgetForm
+                <AddTransactionForm
                   isOpen={isFormOpen}
                   onClose={handleFormClose}
                   onSuccess={handleFormSuccess}
@@ -72,7 +74,6 @@ const BudgetsWrapper = memo(({ username }: BudgetsWrapperProps) => {
   )
 })
 
-BudgetsWrapper.displayName = 'BudgetsWrapper'
+TransactionsWrapper.displayName = 'TransactionsWrapper'
 
-export default BudgetsWrapper
-
+export default TransactionsWrapper

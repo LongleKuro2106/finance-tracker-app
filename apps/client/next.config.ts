@@ -53,6 +53,7 @@ const nextConfig: NextConfig = {
   // Optimize images
   images: {
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
   // Compiler optimizations
   compiler: {
@@ -60,11 +61,34 @@ const nextConfig: NextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
+  // Performance optimizations
+  experimental: {
+    optimizePackageImports: ['recharts', 'lucide-react', '@radix-ui/react-slot', '@radix-ui/react-label'],
+  },
+  // Compression
+  compress: true,
+  // Power optimizations
+  poweredByHeader: false,
   async headers() {
     return [
       {
         source: "/:path*",
-        headers: securityHeaders,
+        headers: [
+          ...securityHeaders,
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate",
+          },
+        ],
       },
     ];
   },

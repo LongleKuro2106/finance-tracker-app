@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Budget } from '@/components/budgets/budget-card'
-import { apiGet, apiDelete, apiPost, apiPut } from '@/lib/api-client'
+import { apiGet, apiDelete, apiPost, apiPut, getCachedData, invalidateCache } from '@/lib/api-client'
 import { invalidateApiCache } from './use-api'
 import { useToast } from '@/components/shared/toast'
 import type { ApiError } from '@/lib/api-client'
+
+interface UseBudgetsOptions {
+  refetchOnMount?: boolean // Default false - use cache if available
+}
 
 interface UseBudgetsResult {
   budgets: Budget[]
@@ -18,13 +22,15 @@ interface UseBudgetsResult {
   isToggling: (month: number, year: number) => boolean
 }
 
-export function useBudgets(): UseBudgetsResult {
+export function useBudgets(options: UseBudgetsOptions = {}): UseBudgetsResult {
+  const { refetchOnMount = false } = options
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [togglingPreserve, setTogglingPreserve] = useState<Set<string>>(new Set())
   const lastFetchRef = useRef<number>(0)
   const lastToggleRef = useRef<Map<string, number>>(new Map())
+  const hasInitializedRef = useRef(false)
   const { showToast } = useToast()
   const DEBOUNCE_MS = 500 // Prevent rapid successive calls
   const TOGGLE_DEBOUNCE_MS = 1000 // Longer debounce for toggle operations (1 second)
@@ -33,10 +39,31 @@ export function useBudgets(): UseBudgetsResult {
     return apiGet<Budget[]>('/api/budgets')
   }, [])
 
-  const loadBudgets = useCallback(async () => {
+  const loadBudgets = useCallback(async (forceRefresh = false) => {
+    // Check cache first (unless forced refresh)
+    if (!forceRefresh && !refetchOnMount && hasInitializedRef.current) {
+      const cached = getCachedData<Budget[]>('/api/budgets')
+      if (cached) {
+        setBudgets(cached)
+        setLoading(false)
+        setError(null)
+        // Background refresh if cache is getting stale
+        const now = Date.now()
+        if (now - lastFetchRef.current > 60000) { // Refresh if last fetch was > 60s ago
+          lastFetchRef.current = now
+          fetchBudgets().then((data) => {
+            setBudgets(data)
+          }).catch(() => {
+            // Silently fail background refresh
+          })
+        }
+        return
+      }
+    }
+
     // Debounce rapid successive calls
     const now = Date.now()
-    if (now - lastFetchRef.current < DEBOUNCE_MS && !loading) {
+    if (!forceRefresh && now - lastFetchRef.current < DEBOUNCE_MS && !loading) {
       return
     }
     lastFetchRef.current = now
@@ -46,6 +73,7 @@ export function useBudgets(): UseBudgetsResult {
     try {
       const data = await fetchBudgets()
       setBudgets(data)
+      hasInitializedRef.current = true
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to load budgets'
@@ -70,23 +98,31 @@ export function useBudgets(): UseBudgetsResult {
     } finally {
       setLoading(false)
     }
-  }, [fetchBudgets, DEBOUNCE_MS, loading, showToast])
+  }, [fetchBudgets, DEBOUNCE_MS, loading, showToast, refetchOnMount])
 
   const refetch = useCallback(async () => {
+    // Invalidate both caches
     invalidateApiCache('/api/budgets')
-    await loadBudgets()
+    invalidateCache('/api/budgets')
+    await loadBudgets(true) // Force refresh
   }, [loadBudgets])
 
   const deleteBudget = useCallback(
     async (month: number, year: number) => {
+      // Optimistic update
+      setBudgets((prev) =>
+        prev.filter((b) => !(b.month === month && b.year === year)),
+      )
+
       try {
         await apiDelete(`/api/budgets/${month}/${year}`)
-        setBudgets((prev) =>
-          prev.filter((b) => !(b.month === month && b.year === year)),
-        )
+        // Invalidate cache after successful delete
         invalidateApiCache('/api/budgets')
+        invalidateCache('/api/budgets')
         showToast('Budget deleted successfully', 'success')
       } catch (err) {
+        // Revert on error
+        await loadBudgets(true)
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to delete budget'
         showToast(errorMessage, 'error')
@@ -106,26 +142,31 @@ export function useBudgets(): UseBudgetsResult {
         throw err
       }
     },
-    [showToast],
+    [showToast, loadBudgets],
   )
 
   const preserveBudget = useCallback(
     async (month: number, year: number) => {
+      // Optimistic update
+      setBudgets((prev) =>
+        prev.map((b) =>
+          b.month === month && b.year === year
+            ? { ...b, preserveToNextMonth: true }
+            : b,
+        ),
+      )
+
       try {
         await apiPost(`/api/budgets/${month}/${year}/preserve`, {
           preserve: true,
         })
+        // Invalidate cache but don't refetch - use optimistic update
         invalidateApiCache('/api/budgets')
-        // Update local state instead of refetching to reduce requests
-        setBudgets((prev) =>
-          prev.map((b) =>
-            b.month === month && b.year === year
-              ? { ...b, preserveToNextMonth: true }
-              : b,
-          ),
-        )
+        invalidateCache('/api/budgets')
         showToast('Budget preserved successfully', 'success')
       } catch (err) {
+        // Revert on error
+        await loadBudgets(true)
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to preserve budget'
         showToast(errorMessage, 'error')
@@ -145,7 +186,7 @@ export function useBudgets(): UseBudgetsResult {
         throw err
       }
     },
-    [showToast],
+    [showToast, loadBudgets],
   )
 
   const togglePreserve = useCallback(
@@ -172,24 +213,27 @@ export function useBudgets(): UseBudgetsResult {
       lastToggleRef.current.set(key, now)
       setTogglingPreserve((prev) => new Set(prev).add(key))
 
+      // Find current budget state for optimistic update
+      const currentBudget = budgets.find(
+        (b) => b.month === month && b.year === year,
+      )
+      const newPreserveState = !currentBudget?.preserveToNextMonth
+
+      // Optimistic update
+      setBudgets((prev) =>
+        prev.map((b) =>
+          b.month === month && b.year === year
+            ? { ...b, preserveToNextMonth: newPreserveState }
+            : b,
+        ),
+      )
+
       try {
         await apiPut(`/api/budgets/${month}/${year}/preserve`, {})
+        // Invalidate cache but don't refetch - use optimistic update
         invalidateApiCache('/api/budgets')
+        invalidateCache('/api/budgets')
 
-        // Optimize: Update local state instead of refetching to reduce requests
-        setBudgets((prev) =>
-          prev.map((b) =>
-            b.month === month && b.year === year
-              ? { ...b, preserveToNextMonth: !b.preserveToNextMonth }
-              : b,
-          ),
-        )
-
-        // Find the budget to show appropriate message
-        const budget = budgets.find(
-          (b) => b.month === month && b.year === year,
-        )
-        const newPreserveState = !budget?.preserveToNextMonth
         showToast(
           newPreserveState
             ? 'Budget preserved successfully'
@@ -198,13 +242,7 @@ export function useBudgets(): UseBudgetsResult {
         )
       } catch (err) {
         // Revert optimistic update on error
-        setBudgets((prev) =>
-          prev.map((b) =>
-            b.month === month && b.year === year
-              ? { ...b, preserveToNextMonth: !b.preserveToNextMonth }
-              : b,
-          ),
-        )
+        await loadBudgets(true)
 
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to toggle preserve setting'
@@ -233,7 +271,7 @@ export function useBudgets(): UseBudgetsResult {
         })
       }
     },
-    [showToast, budgets, togglingPreserve],
+    [showToast, budgets, togglingPreserve, loadBudgets],
   )
 
   const isToggling = useCallback(
@@ -244,8 +282,10 @@ export function useBudgets(): UseBudgetsResult {
   )
 
   useEffect(() => {
-    loadBudgets()
-  }, [loadBudgets])
+    // Only fetch on mount if refetchOnMount is true or no cache available
+    loadBudgets(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty deps - only run on mount
 
   return {
     budgets,

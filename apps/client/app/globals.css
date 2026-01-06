@@ -44,7 +44,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1.5rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -76,6 +76,10 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --success: oklch(0.646 0.222 141.116);
+  --success-foreground: oklch(0.985 0 0);
+  --info: oklch(0.6 0.118 244.704);
+  --info-foreground: oklch(0.985 0 0);
 }
 
 .dark {
@@ -110,6 +114,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --success: oklch(0.696 0.17 162.48);
+  --success-foreground: oklch(0.145 0 0);
+  --info: oklch(0.696 0.17 202.48);
+  --info-foreground: oklch(0.985 0 0);
 }
 
 @layer base {
@@ -118,5 +126,185 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Neumorphism Design Utilities */
+  .neomorphic-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    box-shadow:
+      8px 8px 16px rgba(0, 0, 0, 0.1),
+      -8px -8px 16px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neomorphic-card {
+    border-color: var(--border);
+    box-shadow:
+      8px 8px 16px rgba(0, 0, 0, 0.3),
+      -8px -8px 16px rgba(255, 255, 255, 0.05);
+  }
+
+  .neomorphic-card-inset {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    box-shadow:
+      inset 4px 4px 8px rgba(0, 0, 0, 0.1),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neomorphic-card-inset {
+    border-color: var(--border);
+    box-shadow:
+      inset 4px 4px 8px rgba(0, 0, 0, 0.3),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.05);
+  }
+
+  .neomorphic-button {
+    background-color: var(--card);
+    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    box-shadow:
+      4px 4px 8px rgba(0, 0, 0, 0.1),
+      -4px -4px 8px rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
+  }
+
+  .neomorphic-button:not(.bg-primary):not(.bg-destructive):not(.bg-secondary):not(.bg-background):not(.bg-transparent) {
+    background-color: var(--card);
+  }
+
+  /* Ensure bg-primary, bg-destructive, bg-success, and bg-info override neomorphic-button background */
+  .neomorphic-button.bg-primary {
+    background-color: var(--primary) !important;
+  }
+
+  .neomorphic-button.bg-destructive {
+    background-color: var(--destructive) !important;
+  }
+
+  .neomorphic-button.bg-success {
+    background-color: var(--success) !important;
+  }
+
+  .neomorphic-button.bg-info {
+    background-color: var(--info) !important;
+  }
+
+  .neomorphic-button:hover:not(:disabled) {
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.1),
+      -2px -2px 4px rgba(255, 255, 255, 0.8);
+    transform: translateY(1px);
+  }
+
+  .neomorphic-button:active:not(:disabled) {
+    box-shadow:
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neomorphic-button {
+    border-color: var(--border);
+    box-shadow:
+      4px 4px 8px rgba(0, 0, 0, 0.3),
+      -4px -4px 8px rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .neomorphic-button:hover:not(:disabled) {
+    box-shadow:
+      2px 2px 4px rgba(0, 0, 0, 0.3),
+      -2px -2px 4px rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .neomorphic-button:active:not(:disabled) {
+    box-shadow:
+      inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+  }
+
+  .neomorphic-input {
+    background-color: var(--input);
+    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    box-shadow:
+      inset 4px 4px 8px rgba(0, 0, 0, 0.1),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
+  }
+
+  .neomorphic-input:focus {
+    box-shadow:
+      inset 2px 2px 4px rgba(0, 0, 0, 0.1),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+      0 0 0 3px var(--ring);
+  }
+
+  .dark .neomorphic-input {
+    border-color: var(--border);
+    box-shadow:
+      inset 4px 4px 8px rgba(0, 0, 0, 0.3),
+      inset -4px -4px 8px rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .neomorphic-input:focus {
+    box-shadow:
+      inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+      0 0 0 3px var(--ring);
+  }
+
+  .neomorphic-dialog {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    box-shadow:
+      12px 12px 24px rgba(0, 0, 0, 0.15),
+      -12px -12px 24px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neomorphic-dialog {
+    border-color: var(--border);
+    box-shadow:
+      12px 12px 24px rgba(0, 0, 0, 0.4),
+      -12px -12px 24px rgba(255, 255, 255, 0.05);
+  }
+
+  .neomorphic-sidebar {
+    background: var(--sidebar);
+    border-radius: var(--radius);
+    border: 3px solid var(--sidebar-border);
+    box-shadow:
+      8px 8px 16px rgba(0, 0, 0, 0.1),
+      -8px -8px 16px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neomorphic-sidebar {
+    border-color: var(--sidebar-border);
+    box-shadow:
+      8px 8px 16px rgba(0, 0, 0, 0.3),
+      -8px -8px 16px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Enhanced borders for better clarity */
+  .border-enhanced {
+    border: 3px solid var(--border);
+  }
+
+  .dark .border-enhanced {
+    border-color: var(--border);
+  }
+
+  /* Hide scrollbar for mobile nav */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
