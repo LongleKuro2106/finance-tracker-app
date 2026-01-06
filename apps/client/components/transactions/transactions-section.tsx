@@ -26,7 +26,7 @@ const TransactionsSection = ({
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-6">
+    <div className="neomorphic-card p-4 sm:p-6 rounded-[var(--radius)] border-enhanced">
       <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
       <TransactionList refreshKey={refreshKey} onRefresh={handleRefresh} />
     </div>

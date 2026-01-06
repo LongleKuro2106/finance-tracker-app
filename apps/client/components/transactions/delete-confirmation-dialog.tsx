@@ -46,7 +46,7 @@ const DeleteConfirmationDialog = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in p-4"
       onClick={handleBackdropClick}
       onKeyDown={handleKeyDown}
       role="dialog"
@@ -54,7 +54,7 @@ const DeleteConfirmationDialog = ({
       aria-labelledby="delete-dialog-title"
     >
       <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md p-6 space-y-4"
+        className="neomorphic-dialog w-full max-w-md p-6 sm:p-8 space-y-4 animate-scale-in max-h-[90vh] overflow-y-auto rounded-[var(--radius)] border-enhanced"
         onClick={(e) => e.stopPropagation()}
       >
         <div>

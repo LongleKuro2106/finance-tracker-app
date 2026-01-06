@@ -54,11 +54,27 @@ const SignOutButton = ({ iconOnly = false }: SignOutButtonProps) => {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="h-10 w-full rounded-md bg-neutral-200 dark:bg-neutral-800 px-4 hover:bg-neutral-300 dark:hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+      className="group relative flex items-center justify-center p-2 rounded-md bg-sidebar-accent text-sidebar-accent-foreground hover:bg-destructive hover:text-white disabled:opacity-50 transition-all duration-200"
       aria-busy={loading}
       aria-label="Sign out"
+      title="Sign out"
     >
-      {loading ? 'Signing out…' : 'Sign out'}
+      <svg
+        className="w-5 h-5 flex-shrink-0 stroke-[2.5]"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+        />
+      </svg>
+      <span className="nav-text whitespace-nowrap opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-[-10px] transition-all duration-300 ease-out absolute top-full mt-2 left-1/2 -translate-x-1/2 text-xs bg-sidebar-accent px-2 py-1 rounded shadow-lg z-50 pointer-events-none">
+        {loading ? 'Signing out…' : 'Sign out'}
+      </span>
     </button>
   )
 }

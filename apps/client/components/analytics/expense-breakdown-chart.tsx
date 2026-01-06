@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import {
   ChartContainer,
@@ -24,6 +24,16 @@ interface ParentCategoryData {
 
 const ExpenseBreakdownChart = () => {
   const { categoriesData, loading, error } = useAnalytics()
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Memoize data to ensure stable reference for useMemo dependencies
   const data = useMemo(() => categoriesData || [], [categoriesData])
@@ -93,10 +103,10 @@ const ExpenseBreakdownChart = () => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Expense Breakdown</h3>
-        <div className="h-[300px] flex items-center justify-center">
-          <p className="text-neutral-600 dark:text-neutral-400">Loading...</p>
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Expense Breakdown</h3>
+        <div className="h-[250px] sm:h-[300px] flex items-center justify-center neomorphic-card-inset p-4 rounded-lg">
+          <p className="text-muted-foreground font-medium">Loading...</p>
         </div>
       </div>
     )
@@ -104,10 +114,10 @@ const ExpenseBreakdownChart = () => {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Expense Breakdown</h3>
-        <div className="h-[300px] flex items-center justify-center">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Expense Breakdown</h3>
+        <div className="h-[250px] sm:h-[300px] flex items-center justify-center neomorphic-card-inset p-4 rounded-lg">
+          <p className="text-destructive font-medium">{error}</p>
         </div>
       </div>
     )
@@ -115,10 +125,10 @@ const ExpenseBreakdownChart = () => {
 
   if (parentCategoryData.length === 0) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Expense Breakdown</h3>
-        <div className="h-[300px] flex items-center justify-center">
-          <p className="text-neutral-600 dark:text-neutral-400">
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Expense Breakdown</h3>
+        <div className="h-[250px] sm:h-[300px] flex items-center justify-center neomorphic-card-inset p-4 rounded-lg">
+          <p className="text-muted-foreground font-medium">
             No expense data available
           </p>
         </div>
@@ -127,20 +137,20 @@ const ExpenseBreakdownChart = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-      <h3 className="text-lg font-semibold mb-4">Expense Breakdown</h3>
-      <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-        <ResponsiveContainer width="100%" height={300}>
+    <div className="neomorphic-card p-4 sm:p-6 animate-slide-up rounded-[var(--radius)] border-enhanced">
+      <h3 className="text-base sm:text-lg font-semibold mb-4">Expense Breakdown</h3>
+      <ChartContainer config={chartConfig} className="min-h-[250px] sm:min-h-[300px] w-full neomorphic-card-inset p-4 rounded-lg">
+        <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(0)}%`
-              }
-              outerRadius={100}
+              label={({ name, percent }) => {
+                return isMobile ? `${(percent * 100).toFixed(0)}%` : `${name}: ${(percent * 100).toFixed(0)}%`;
+              }}
+              outerRadius={isMobile ? 80 : 100}
               fill="#8884d8"
               dataKey="value"
             >
@@ -153,12 +163,14 @@ const ExpenseBreakdownChart = () => {
           </PieChart>
         </ResponsiveContainer>
       </ChartContainer>
-      <div className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
+      <div className="mt-4 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
         Total Expenses:{' '}
-        {new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(totalExpenses)}
+        <span className="font-semibold text-foreground">
+          {new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+          }).format(totalExpenses)}
+        </span>
       </div>
     </div>
   )

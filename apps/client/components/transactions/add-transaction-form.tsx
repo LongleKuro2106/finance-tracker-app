@@ -114,10 +114,10 @@ const AddTransactionForm = ({
   const formContent = (
     <>
       {!asPage && (
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <h2
             id="transaction-form-title"
-            className="text-xl font-semibold"
+            className="text-3xl font-black uppercase tracking-tight"
           >
             Add Transaction
           </h2>
@@ -150,7 +150,7 @@ const AddTransactionForm = ({
       {asPage && (
         <h2
           id="transaction-form-title"
-          className="text-xl font-semibold mb-4"
+          className="text-3xl font-black uppercase tracking-tight mb-6"
         >
           Add Transaction
         </h2>
@@ -159,11 +159,11 @@ const AddTransactionForm = ({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
+            className="space-y-6"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column */}
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <FormField
                   control={form.control}
                   name="type"
@@ -173,7 +173,7 @@ const AddTransactionForm = ({
                       <FormControl>
                         <select
                           {...field}
-                          className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
+                          className="neomorphic-input h-11 w-full px-4 py-2.5 text-sm font-medium transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded-[var(--radius)]"
                           disabled={isSubmitting}
                         >
                           <option value="expense">Expense</option>
@@ -231,7 +231,7 @@ const AddTransactionForm = ({
               </div>
 
               {/* Right Column */}
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <FormField
                   control={form.control}
                   name="categoryName"
@@ -273,14 +273,14 @@ const AddTransactionForm = ({
 
             {error && (
               <div
-                className="text-sm text-red-600 dark:text-red-400"
+                className="border-[3px] border-destructive bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive"
                 role="alert"
               >
                 {error}
               </div>
             )}
 
-            <div className="flex gap-3 justify-end pt-2">
+            <div className="flex gap-4 justify-end pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -308,7 +308,7 @@ const AddTransactionForm = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in p-4"
       onClick={handleClose}
       onKeyDown={handleKeyDown}
       role="dialog"
@@ -316,7 +316,7 @@ const AddTransactionForm = ({
       aria-labelledby="transaction-form-title"
     >
       <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-2xl p-6"
+        className="neomorphic-dialog w-full max-w-2xl p-6 sm:p-8 animate-scale-in max-h-[90vh] overflow-y-auto rounded-[var(--radius)] border-enhanced"
         onClick={(e) => e.stopPropagation()}
       >
         {formContent}

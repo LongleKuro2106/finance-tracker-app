@@ -73,20 +73,20 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 space-y-4"
+        className="w-full max-w-md neomorphic-card p-8 space-y-6 rounded-[var(--radius)]"
         aria-label="Login form"
       >
-        <h1 className="text-xl font-semibold">Login</h1>
+        <h1 className="text-3xl font-bold">Login</h1>
         {submitError && (
-          <div className="text-red-600 text-sm" role="alert" aria-live="polite">
+          <div className="neomorphic-card-inset px-4 py-3 text-sm font-medium text-destructive rounded-lg" role="alert" aria-live="polite">
             {submitError}
           </div>
         )}
         <label className="block">
-          <Label className="mb-1 block">Username or Email</Label>
+          <Label className="mb-2 block text-base font-medium">Username or Email</Label>
           <Input
             type="text"
             {...register('usernameOrEmail')}
@@ -94,13 +94,13 @@ const LoginPage = () => {
             aria-describedby={errors.usernameOrEmail ? 'usernameOrEmail-error' : undefined}
           />
           {errors.usernameOrEmail && (
-            <p id="usernameOrEmail-error" className="text-xs text-red-600 mt-1">
+            <p id="usernameOrEmail-error" className="text-xs font-medium text-destructive mt-2">
               {errors.usernameOrEmail.message}
             </p>
           )}
         </label>
         <label className="block">
-          <Label className="mb-1 block">Password</Label>
+          <Label className="mb-2 block text-base font-medium">Password</Label>
           <Input
             type="password"
             {...register('password')}
@@ -108,7 +108,7 @@ const LoginPage = () => {
             aria-describedby={errors.password ? 'password-error' : undefined}
           />
           {errors.password && (
-            <p id="password-error" className="text-xs text-red-600 mt-1">
+            <p id="password-error" className="text-xs font-medium text-destructive mt-2">
               {errors.password.message}
             </p>
           )}
@@ -116,8 +116,8 @@ const LoginPage = () => {
         <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="w-full">
           {isSubmitting ? 'Logging in...' : 'Login'}
         </Button>
-        <div className="text-sm text-neutral-600 dark:text-neutral-400">
-          No account? <a className="underline" href="/signup">Sign up</a>
+        <div className="text-sm font-medium text-muted-foreground text-center">
+          No account? <a className="text-foreground underline hover:no-underline" href="/signup">Sign up</a>
         </div>
       </form>
     </div>

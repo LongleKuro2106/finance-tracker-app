@@ -94,7 +94,9 @@ export function useTransactions(
   const deleteTransaction = useCallback(
     async (id: string) => {
       await apiDelete(`/api/transactions/${id}`)
+      // Optimistically update local state - no need to refetch immediately
       setTransactions((prev) => prev.filter((t) => t.id !== id))
+      // Invalidate cache for future fetches and analytics updates
       invalidateApiCache('/api/transactions')
     },
     [],

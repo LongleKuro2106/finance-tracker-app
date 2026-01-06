@@ -71,7 +71,7 @@ const TransactionItem = memo(
               {transaction.type === 'income' ? 'Income' : 'Expense'}
             </div>
             {categoryDisplay && (
-              <span className="text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="text-sm text-neutral-600 dark:text-neutral-100">
                 {categoryDisplay.child ? (
                   <>
                     <span className="font-semibold">{categoryDisplay.parent}</span>
@@ -84,11 +84,11 @@ const TransactionItem = memo(
             )}
           </div>
           {transaction.description && (
-            <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-1">
+            <p className="text-sm text-neutral-700 dark:text-neutral-100 mt-1">
               {transaction.description}
             </p>
           )}
-          <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+          <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-1">
             {formattedDate}
           </p>
         </div>
@@ -194,6 +194,8 @@ const TransactionList = ({ refreshKey, onRefresh }: TransactionListProps) => {
     try {
       await deleteTransaction(deletingTransaction.id)
       setDeletingTransaction(null)
+      // Only call onRefresh to update analytics, not to refetch transactions
+      // since deleteTransaction already updates local state
       onRefresh?.()
     } catch {
       // Error is handled by hook

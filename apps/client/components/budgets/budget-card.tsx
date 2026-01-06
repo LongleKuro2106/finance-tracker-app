@@ -118,25 +118,25 @@ const BudgetCard = memo(
     }, [onTogglePreserve, budget])
 
   return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-6 bg-white dark:bg-neutral-900">
+    <div className="neomorphic-card p-4 sm:p-6 transition-all hover:shadow-[6px_6px_12px_rgba(0,0,0,0.08),-6px_-6px_12px_rgba(255,255,255,0.9)] animate-slide-up rounded-[var(--radius)] border-enhanced">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold">
+          <h3 className="text-base sm:text-lg font-semibold">
             {monthName} {budget.year}
           </h3>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Budget: {formattedBudgetAmount}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             onClick={handleEdit}
             aria-label="Edit budget"
-            className="h-8 w-8"
+            className="h-8 w-8 touch-target"
           >
             <svg
               className="w-4 h-4"
@@ -158,7 +158,7 @@ const BudgetCard = memo(
             size="icon-sm"
             onClick={handleDelete}
             aria-label="Delete budget"
-            className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 touch-target"
           >
             <svg
               className="w-4 h-4"
@@ -179,8 +179,8 @@ const BudgetCard = memo(
 
       {/* Progress Bar */}
       <div className="mb-4">
-        <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-neutral-600 dark:text-neutral-400">
+        <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+          <span className="text-muted-foreground">
             Spent: {formattedSpent}
           </span>
           <span
@@ -189,15 +189,15 @@ const BudgetCard = memo(
                 ? 'text-red-600 dark:text-red-400'
                 : percentage >= 90
                   ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-neutral-700 dark:text-neutral-300'
+                  : 'text-foreground'
             }`}
           >
             {percentage.toFixed(1)}%
           </span>
         </div>
-        <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-2.5">
+        <div className="w-full bg-muted rounded-full h-2.5">
           <div
-            className={`h-2.5 rounded-full transition-all ${
+            className={`h-2.5 rounded-full transition-all duration-500 ${
               exceeded
                 ? 'bg-red-500 dark:bg-red-600'
                 : percentage >= 90
@@ -207,10 +207,10 @@ const BudgetCard = memo(
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
-        <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground mt-1">
           <span>Remaining: {formattedRemaining}</span>
           {exceeded && (
-            <span className="text-red-600 dark:text-red-400">
+            <span className="text-red-600 dark:text-red-400 font-medium">
               Over by: {formattedOver}
             </span>
           )}
@@ -232,7 +232,7 @@ const BudgetCard = memo(
 
       {/* Preserve Setting */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800 rounded-md">
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -240,13 +240,13 @@ const BudgetCard = memo(
               checked={budget.preserveToNextMonth}
               onChange={handleTogglePreserve}
               disabled={isToggling}
-              className="w-4 h-4 rounded border-neutral-300 dark:border-neutral-600 text-primary focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed touch-target"
               aria-label="Preserve budget to next month"
               aria-busy={isToggling}
             />
             <label
               htmlFor={`preserve-${budget.id}`}
-              className="text-sm font-medium text-neutral-700 dark:text-neutral-300 cursor-pointer"
+              className="text-xs sm:text-sm font-medium text-foreground cursor-pointer"
             >
               Auto-preserve to Next Month
             </label>
@@ -261,7 +261,7 @@ const BudgetCard = memo(
           type="button"
           variant="outline"
           onClick={handlePreserve}
-          className="w-full"
+          className="w-full touch-target"
         >
           Create Next Month Budget Now
         </Button>

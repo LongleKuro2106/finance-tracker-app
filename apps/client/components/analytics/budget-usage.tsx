@@ -39,13 +39,13 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Budget Usage</h3>
-        <div className="space-y-4">
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Budget Usage</h3>
+        <div className="space-y-4 neomorphic-card-inset p-4 rounded-lg">
           {[1, 2].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-32 mb-2" />
-              <div className="h-2 bg-neutral-200 dark:bg-neutral-700 rounded" />
+              <div className="h-4 bg-muted rounded w-32 mb-2" />
+              <div className="h-2 bg-muted rounded" />
             </div>
           ))}
         </div>
@@ -55,20 +55,24 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Budget Usage</h3>
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Budget Usage</h3>
+        <div className="neomorphic-card-inset p-4 rounded-lg">
+          <p className="text-destructive font-medium">{error}</p>
+        </div>
       </div>
     )
   }
 
   if (budgets.length === 0) {
     return (
-      <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-        <h3 className="text-lg font-semibold mb-4">Budget Usage</h3>
-        <p className="text-neutral-600 dark:text-neutral-400">
-          No budget set for this month
-        </p>
+      <div className="neomorphic-card p-4 sm:p-6 animate-fade-in rounded-[var(--radius)] border-enhanced">
+        <h3 className="text-base sm:text-lg font-semibold mb-4">Budget Usage</h3>
+        <div className="neomorphic-card-inset p-4 rounded-lg">
+          <p className="text-muted-foreground font-medium">
+            No budget set for this month
+          </p>
+        </div>
       </div>
     )
   }
@@ -81,9 +85,9 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-lg p-6 border border-neutral-200 dark:border-neutral-800">
-      <h3 className="text-lg font-semibold mb-4">Budget Usage</h3>
-      <div className="space-y-4">
+    <div className="neomorphic-card p-4 sm:p-6 animate-slide-up rounded-[var(--radius)] border-enhanced">
+      <h3 className="text-base sm:text-lg font-semibold mb-4">Budget Usage</h3>
+      <div className="space-y-4 neomorphic-card-inset p-4 rounded-lg">
         {budgets.map((budget) => {
           const spent = budget.status?.spent ?? 0
           const budgetAmount = budget.status?.budget ?? budget.amount
@@ -92,7 +96,7 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
 
           return (
             <div key={`${budget.month}-${budget.year}`} className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="font-medium">
                   {new Date(budget.year, budget.month - 1).toLocaleDateString(
                     'en-US',
@@ -105,15 +109,15 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
                       ? 'text-red-600 dark:text-red-400'
                       : percentage >= 90
                         ? 'text-yellow-600 dark:text-yellow-400'
-                        : 'text-neutral-700 dark:text-neutral-300'
+                        : 'text-foreground'
                   }`}
                 >
                   {percentage.toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-3">
+              <div className="w-full bg-muted h-3 sm:h-4 rounded-lg neomorphic-card-inset">
                 <div
-                  className={`h-3 rounded-full transition-all ${
+                  className={`h-3 sm:h-4 rounded-lg transition-all duration-500 ${
                     exceeded
                       ? 'bg-red-500 dark:bg-red-600'
                       : percentage >= 90
@@ -123,12 +127,12 @@ const BudgetUsage = ({ refreshKey }: BudgetUsageProps) => {
                   style={{ width: `${Math.min(percentage, 100)}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
                 <span>
                   Spent: {formatAmount(spent)} / {formatAmount(budgetAmount)}
                 </span>
                 {exceeded && (
-                  <span className="text-red-600 dark:text-red-400">
+                  <span className="text-red-600 dark:text-red-400 font-medium">
                     Over by: {formatAmount(spent - budgetAmount)}
                   </span>
                 )}

@@ -125,7 +125,7 @@ const CategorySelector = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30 disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between"
+        className="neomorphic-input h-11 w-full px-4 py-2.5 text-sm font-medium transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between rounded-[var(--radius)]"
       >
         <span className={value ? '' : 'text-neutral-500 dark:text-neutral-400'}>
           {value || 'None'}
@@ -147,7 +147,7 @@ const CategorySelector = ({
 
       {isOpen && (
         <>
-          <div className="absolute z-50 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md shadow-lg max-h-80 overflow-y-auto">
+          <div className="absolute z-50 mt-1 w-full neomorphic-card rounded-[var(--radius)] shadow-lg max-h-80 overflow-y-auto">
             <div
               className="p-1 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-sm"
               onClick={() => handleSelect('')}
@@ -199,7 +199,7 @@ const CategorySelector = ({
             hoveredCategoryData.children.length > 0 &&
             submenuPosition && (
               <div
-                className="fixed z-50 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md shadow-lg min-w-[200px] max-h-80 overflow-y-auto"
+                className="fixed z-50 neomorphic-card rounded-[var(--radius)] shadow-lg min-w-[200px] max-h-80 overflow-y-auto"
                 style={{
                   top: `${submenuPosition.top}px`,
                   left: `${submenuPosition.left}px`,

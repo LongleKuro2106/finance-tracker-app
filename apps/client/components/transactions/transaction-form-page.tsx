@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import DashboardSidebar from '../dashboard/dashboard-sidebar'
+import { useCallback } from 'react'
+import DashboardTopbar from '../dashboard/dashboard-topbar'
 import AddTransactionForm from './add-transaction-form'
 
 interface TransactionFormPageProps {
@@ -11,21 +12,21 @@ interface TransactionFormPageProps {
 const TransactionFormPage = ({ username }: TransactionFormPageProps) => {
   const router = useRouter()
 
-  const handleSuccess = () => {
-    router.push('/dashboard')
-  }
+  const handleSuccess = useCallback(() => {
+    router.push('/transactions')
+  }, [router])
 
-  const handleClose = () => {
-    router.push('/dashboard')
-  }
+  const handleClose = useCallback(() => {
+    router.push('/transactions')
+  }, [router])
 
   return (
-    <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <DashboardSidebar username={username} />
-      <main className="flex-1 overflow-auto">
-        <div className="p-6">
+    <div className="flex flex-col min-h-screen bg-background">
+      <DashboardTopbar />
+      <main className="flex-1 overflow-auto w-full">
+        <div className="p-4 sm:p-6">
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6">
+            <div className="neomorphic-card p-4 sm:p-6 animate-scale-in rounded-[var(--radius)] border-enhanced">
               <AddTransactionForm
                 isOpen={true}
                 onClose={handleClose}

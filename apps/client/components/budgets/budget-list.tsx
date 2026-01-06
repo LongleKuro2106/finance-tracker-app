@@ -120,7 +120,7 @@ const BudgetList = ({ refreshKey, onRefresh }: BudgetListProps) => {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {budgets.map((budget) => (
             <BudgetCard
               key={`${budget.month}-${budget.year}`}

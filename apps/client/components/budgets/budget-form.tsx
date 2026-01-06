@@ -130,7 +130,7 @@ const BudgetForm = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-fade-in p-4"
       onClick={handleClose}
       onKeyDown={handleKeyDown}
       role="dialog"
@@ -138,7 +138,7 @@ const BudgetForm = ({
       aria-labelledby="budget-form-title"
     >
       <div
-        className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg w-full max-w-md mx-4 p-6"
+        className="neomorphic-dialog w-full max-w-md p-6 sm:p-8 animate-scale-in max-h-[90vh] overflow-y-auto rounded-[var(--radius)] border-enhanced"
         onClick={(e) => e.stopPropagation()}
       >
         <h2
