@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -17,6 +16,7 @@ import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
+import { BudgetMonthYearQueryDto } from './dto/budget-query.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('v1/budgets')
@@ -39,49 +39,37 @@ export class BudgetsController {
   @Get('status')
   getStatus(
     @Req() req: { user: { userId: string } },
-    @Query('month') month: string,
-    @Query('year') year: string,
+    @Query(ValidationPipe) query: BudgetMonthYearQueryDto,
   ) {
-    const monthNum = Number(month);
-    const yearNum = Number(year);
-
-    if (isNaN(monthNum) || isNaN(yearNum)) {
-      throw new BadRequestException(
-        'Month and year query parameters are required and must be valid numbers',
-      );
-    }
-
     return this.budgetsService.checkBudgetStatus(
       req.user.userId,
-      monthNum,
-      yearNum,
+      query.month,
+      query.year,
     );
   }
 
   @Get(':month/:year')
   findOne(
     @Req() req: { user: { userId: string } },
-    @Param('month') month: string,
-    @Param('year') year: string,
+    @Param(ValidationPipe) params: BudgetMonthYearQueryDto,
   ) {
     return this.budgetsService.findOne(
       req.user.userId,
-      Number(month),
-      Number(year),
+      params.month,
+      params.year,
     );
   }
 
   @Put(':month/:year')
   update(
     @Req() req: { user: { userId: string } },
-    @Param('month') month: string,
-    @Param('year') year: string,
+    @Param(ValidationPipe) params: BudgetMonthYearQueryDto,
     @Body(ValidationPipe) dto: UpdateBudgetDto,
   ) {
     return this.budgetsService.update(
       req.user.userId,
-      Number(month),
-      Number(year),
+      params.month,
+      params.year,
       dto,
     );
   }
@@ -89,27 +77,25 @@ export class BudgetsController {
   @Delete(':month/:year')
   remove(
     @Req() req: { user: { userId: string } },
-    @Param('month') month: string,
-    @Param('year') year: string,
+    @Param(ValidationPipe) params: BudgetMonthYearQueryDto,
   ) {
     return this.budgetsService.remove(
       req.user.userId,
-      Number(month),
-      Number(year),
+      params.month,
+      params.year,
     );
   }
 
   @Post(':month/:year/preserve')
   preserve(
     @Req() req: { user: { userId: string } },
-    @Param('month') month: string,
-    @Param('year') year: string,
+    @Param(ValidationPipe) params: BudgetMonthYearQueryDto,
     @Body(ValidationPipe) dto: PreserveBudgetDto,
   ) {
     return this.budgetsService.preserve(
       req.user.userId,
-      Number(month),
-      Number(year),
+      params.month,
+      params.year,
       dto,
     );
   }
@@ -117,13 +103,12 @@ export class BudgetsController {
   @Put(':month/:year/preserve')
   togglePreserve(
     @Req() req: { user: { userId: string } },
-    @Param('month') month: string,
-    @Param('year') year: string,
+    @Param(ValidationPipe) params: BudgetMonthYearQueryDto,
   ) {
     return this.budgetsService.togglePreserve(
       req.user.userId,
-      Number(month),
-      Number(year),
+      params.month,
+      params.year,
     );
   }
 }

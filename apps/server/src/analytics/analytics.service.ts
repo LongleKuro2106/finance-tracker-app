@@ -1,10 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 
 export interface DateRange {
   startDate?: Date;
   endDate?: Date;
+}
+
+/**
+ * Maximum allowed date range in days (1 year)
+ */
+const MAX_DATE_RANGE_DAYS = 365;
+
+/**
+ * Validates date range and throws if it exceeds the maximum allowed range
+ */
+function validateDateRange(dateRange?: DateRange): void {
+  if (!dateRange?.startDate || !dateRange?.endDate) {
+    return;
+  }
+
+  const daysDiff = Math.ceil(
+    (dateRange.endDate.getTime() - dateRange.startDate.getTime()) /
+      (1000 * 60 * 60 * 24),
+  );
+
+  if (daysDiff > MAX_DATE_RANGE_DAYS) {
+    throw new BadRequestException(
+      `Date range cannot exceed ${MAX_DATE_RANGE_DAYS} days`,
+    );
+  }
+
+  if (daysDiff < 0) {
+    throw new BadRequestException('Start date must be before end date');
+  }
 }
 
 export interface OverviewResponse {
@@ -43,11 +72,15 @@ export class AnalyticsService {
   /**
    * Get overview statistics for a user
    * Returns total revenue, expenses, and net balance
+   * Uses database-level aggregation for performance
    */
   async getOverview(
     userId: string,
     dateRange?: DateRange,
   ): Promise<OverviewResponse> {
+    // Validate date range
+    validateDateRange(dateRange);
+
     const where: Prisma.TransactionWhereInput = {
       userId,
     };
@@ -62,26 +95,30 @@ export class AnalyticsService {
       }
     }
 
-    // Get all transactions in the date range
-    const transactions = await this.prisma.transaction.findMany({
-      where,
-      select: {
-        type: true,
-        amount: true,
-      },
-    });
+    // Use database-level aggregation instead of loading all transactions
+    const [incomeResult, expenseResult] = await Promise.all([
+      this.prisma.transaction.aggregate({
+        where: {
+          ...where,
+          type: 'income',
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      this.prisma.transaction.aggregate({
+        where: {
+          ...where,
+          type: 'expense',
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
 
-    let totalRevenue = 0;
-    let totalExpenses = 0;
-
-    transactions.forEach((transaction) => {
-      const amount = Number(transaction.amount);
-      if (transaction.type === 'income') {
-        totalRevenue += amount;
-      } else {
-        totalExpenses += amount;
-      }
-    });
+    const totalRevenue = Number(incomeResult._sum.amount ?? 0);
+    const totalExpenses = Number(expenseResult._sum.amount ?? 0);
 
     return {
       totalRevenue,
@@ -93,12 +130,15 @@ export class AnalyticsService {
   /**
    * Get breakdown by category
    * Groups transactions by category, separating income and expense
-   * Optimized for pie charts and bar charts
+   * Uses database-level aggregation for performance
    */
   async getCategories(
     userId: string,
     dateRange?: DateRange,
   ): Promise<CategoryData[]> {
+    // Validate date range
+    validateDateRange(dateRange);
+
     const where: Prisma.TransactionWhereInput = {
       userId,
     };
@@ -113,27 +153,58 @@ export class AnalyticsService {
       }
     }
 
-    const transactions = await this.prisma.transaction.findMany({
+    // Use database-level aggregation with groupBy
+    const categoryTotals = await this.prisma.transaction.groupBy({
+      by: ['categoryId', 'type'],
       where,
-      include: {
-        category: true,
+      _sum: {
+        amount: true,
       },
     });
 
-    // Group by category (combining income and expense)
+    // Get category names for all unique category IDs
+    const categoryIds = [
+      ...new Set(
+        categoryTotals
+          .map((t) => t.categoryId)
+          .filter((id): id is number => id !== null),
+      ),
+    ];
+
+    const categoriesMap = new Map<number, { name: string }>();
+    if (categoryIds.length > 0) {
+      const categories = await this.prisma.category.findMany({
+        where: {
+          id: { in: categoryIds },
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      categories.forEach((cat) => {
+        categoriesMap.set(cat.id, { name: cat.name });
+      });
+    }
+
+    // Group results by category
     const categoryMap = new Map<
       number | null,
       { categoryName: string | null; income: number; expense: number }
     >();
 
-    transactions.forEach((transaction) => {
-      const categoryId = transaction.categoryId ?? null;
-      const categoryName = transaction.category?.name ?? null;
-      const amount = Number(transaction.amount);
+    categoryTotals.forEach((total) => {
+      const categoryId = total.categoryId ?? null;
+      const categoryName =
+        total.categoryId !== null
+          ? (categoriesMap.get(total.categoryId)?.name ?? null)
+          : null;
+      const amount = Number(total._sum.amount ?? 0);
 
       const existing = categoryMap.get(categoryId);
       if (existing) {
-        if (transaction.type === 'income') {
+        if (total.type === 'income') {
           existing.income += amount;
         } else {
           existing.expense += amount;
@@ -141,8 +212,8 @@ export class AnalyticsService {
       } else {
         categoryMap.set(categoryId, {
           categoryName,
-          income: transaction.type === 'income' ? amount : 0,
-          expense: transaction.type === 'expense' ? amount : 0,
+          income: total.type === 'income' ? amount : 0,
+          expense: total.type === 'expense' ? amount : 0,
         });
       }
     });
@@ -165,7 +236,7 @@ export class AnalyticsService {
   /**
    * Get monthly trends
    * Returns income and expense grouped by month
-   * Optimized for line charts
+   * Uses database-level aggregation for performance
    */
   async getMonthly(
     userId: string,
@@ -181,20 +252,37 @@ export class AnalyticsService {
         return date;
       })();
 
-    const transactions = await this.prisma.transaction.findMany({
-      where: {
-        userId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      select: {
-        type: true,
-        amount: true,
-        date: true,
-      },
-    });
+    // Validate date range if both dates are provided
+    if (dateRange?.startDate && dateRange?.endDate) {
+      validateDateRange(dateRange);
+    } else {
+      // Validate calculated date range
+      const calculatedRange: DateRange = { startDate, endDate };
+      validateDateRange(calculatedRange);
+    }
+
+    // Use raw query for efficient month/year extraction and aggregation
+    // This is safe because we're using Prisma's parameterized query builder
+    const monthlyAggregates = await this.prisma.$queryRaw<
+      Array<{
+        year: number;
+        month: number;
+        type: string;
+        total: number;
+      }>
+    >`
+      SELECT
+        EXTRACT(YEAR FROM date)::int as year,
+        EXTRACT(MONTH FROM date)::int as month,
+        type,
+        SUM(amount)::decimal as total
+      FROM "Transaction"
+      WHERE "userId" = ${userId}::uuid
+        AND date >= ${startDate}::date
+        AND date <= ${endDate}::date
+      GROUP BY EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date), type
+      ORDER BY year, month
+    `;
 
     // Group by month and year
     const monthlyMap = new Map<
@@ -202,26 +290,23 @@ export class AnalyticsService {
       { income: number; expense: number; month: number; year: number }
     >();
 
-    transactions.forEach((transaction) => {
-      const date = new Date(transaction.date);
-      const month = date.getMonth() + 1; // 1-12
-      const year = date.getFullYear();
-      const key = `${year}-${month}`;
-      const amount = Number(transaction.amount);
+    monthlyAggregates.forEach((aggregate) => {
+      const key = `${aggregate.year}-${aggregate.month}`;
+      const amount = Number(aggregate.total);
 
       const existing = monthlyMap.get(key);
       if (existing) {
-        if (transaction.type === 'income') {
+        if (aggregate.type === 'income') {
           existing.income += amount;
         } else {
           existing.expense += amount;
         }
       } else {
         monthlyMap.set(key, {
-          month,
-          year,
-          income: transaction.type === 'income' ? amount : 0,
-          expense: transaction.type === 'expense' ? amount : 0,
+          month: aggregate.month,
+          year: aggregate.year,
+          income: aggregate.type === 'income' ? amount : 0,
+          expense: aggregate.type === 'expense' ? amount : 0,
         });
       }
     });
@@ -244,7 +329,7 @@ export class AnalyticsService {
   /**
    * Get daily spending for the current month
    * Returns expense totals grouped by day for the current month
-   * Optimized for daily spending line charts
+   * Uses database-level aggregation for performance
    */
   async getDailySpending(
     userId: string,
@@ -259,31 +344,29 @@ export class AnalyticsService {
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0); // Last day of month
 
-    const transactions = await this.prisma.transaction.findMany({
-      where: {
-        userId,
-        type: 'expense', // Only expenses for daily spending
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      select: {
-        amount: true,
-        date: true,
-      },
-    });
+    // Use database-level aggregation
+    const dailyAggregates = await this.prisma.$queryRaw<
+      Array<{
+        day: number;
+        total: number;
+      }>
+    >`
+      SELECT
+        EXTRACT(DAY FROM date)::int as day,
+        SUM(amount)::decimal as total
+      FROM "Transaction"
+      WHERE "userId" = ${userId}::uuid
+        AND type = 'expense'
+        AND date >= ${startDate}::date
+        AND date <= ${endDate}::date
+      GROUP BY EXTRACT(DAY FROM date)
+      ORDER BY day
+    `;
 
-    // Group by day
+    // Create map for quick lookup
     const dailyMap = new Map<number, number>();
-
-    transactions.forEach((transaction) => {
-      const date = new Date(transaction.date);
-      const day = date.getDate(); // 1-31
-      const amount = Number(transaction.amount);
-
-      const existing = dailyMap.get(day) ?? 0;
-      dailyMap.set(day, existing + amount);
+    dailyAggregates.forEach((aggregate) => {
+      dailyMap.set(aggregate.day, Number(aggregate.total));
     });
 
     // Convert to array and fill missing days with 0

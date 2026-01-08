@@ -27,6 +27,46 @@ export interface AuditLogEntry {
 export class AuditLoggerService {
   private readonly logger = new Logger('AuditLogger');
 
+  /**
+   * Sanitizes audit log details to prevent logging sensitive information
+   */
+  private sanitizeDetails(
+    details?: Record<string, unknown>,
+  ): Record<string, unknown> | undefined {
+    if (!details) {
+      return undefined;
+    }
+
+    const sensitiveKeys = [
+      'password',
+      'passwordHash',
+      'token',
+      'accessToken',
+      'refreshToken',
+      'secret',
+      'apiKey',
+      'creditCard',
+      'ssn',
+      'socialSecurityNumber',
+    ];
+
+    const sanitized = { ...details };
+    for (const key of sensitiveKeys) {
+      if (key in sanitized) {
+        sanitized[key] = '[REDACTED]';
+      }
+    }
+
+    // Recursively sanitize nested objects
+    for (const [key, value] of Object.entries(sanitized)) {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        sanitized[key] = this.sanitizeDetails(value as Record<string, unknown>);
+      }
+    }
+
+    return sanitized;
+  }
+
   log(event: AuditLogEntry): void {
     const logMessage = {
       event: event.eventType,
@@ -34,7 +74,7 @@ export class AuditLoggerService {
       username: event.username,
       ip: event.ipAddress,
       userAgent: event.userAgent,
-      details: event.details,
+      details: this.sanitizeDetails(event.details),
       timestamp: event.timestamp.toISOString(),
     };
 

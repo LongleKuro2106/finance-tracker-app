@@ -136,11 +136,20 @@ export class AuthService {
       );
     }
 
+    // Perform dummy password comparison for non-existent users to prevent timing attacks
+    // This ensures consistent timing regardless of whether user exists
+    const dummyHash = '$2b$10$dummy.hash.for.timing.attack.prevention.xyz';
+
     if (!user) {
       // Record failed attempt even if user doesn't exist (to prevent enumeration)
       await this.accountLockoutService.recordFailedAttempt(
         input.usernameOrEmail,
       );
+
+      // Perform dummy password comparison to maintain consistent timing
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      await compare(input.password, dummyHash);
+
       this.auditLogger.logLoginFailure(
         input.usernameOrEmail,
         'Invalid username or email',

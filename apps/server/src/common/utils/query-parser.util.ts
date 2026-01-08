@@ -17,6 +17,37 @@
  * - in: value in array (comma-separated)
  */
 
+import { BadRequestException } from '@nestjs/common';
+
+/**
+ * Allowed sort fields for Transaction model (strict whitelist)
+ * Based on Prisma schema: id, userId, categoryId, type, amount, date, description, createdAt, updatedAt
+ */
+const ALLOWED_SORT_FIELDS = [
+  'id',
+  'date',
+  'amount',
+  'type',
+  'description',
+  'createdAt',
+  'updatedAt',
+] as const;
+
+type AllowedSortField = (typeof ALLOWED_SORT_FIELDS)[number];
+
+/**
+ * Validates sort field name against allowed fields
+ * @throws BadRequestException if field is not allowed
+ */
+function validateSortField(field: string): AllowedSortField {
+  if (!ALLOWED_SORT_FIELDS.includes(field as AllowedSortField)) {
+    throw new BadRequestException(
+      `Invalid sort field: "${field}". Allowed fields: ${ALLOWED_SORT_FIELDS.join(', ')}`,
+    );
+  }
+  return field as AllowedSortField;
+}
+
 export interface PaginationOptions {
   page: number;
   size: number;
@@ -67,6 +98,7 @@ function parsePagination(query: Record<string, string | undefined>): PaginationO
 /**
  * Parse sorting from query string
  * ?sort=name:asc,date:desc
+ * Validates field names against allowed fields list
  */
 function parseSort(query: Record<string, string | undefined>): SortOption[] | undefined {
   const sortStr = query.sort;
@@ -80,8 +112,11 @@ function parseSort(query: Record<string, string | undefined>): SortOption[] | un
   for (const part of parts) {
     const [field, direction] = part.trim().split(':');
     if (field && (direction === 'asc' || direction === 'desc')) {
+      const trimmedField = field.trim();
+      // Validate field name against allowed fields
+      const validatedField = validateSortField(trimmedField);
       sorts.push({
-        field: field.trim(),
+        field: validatedField,
         direction: direction as 'asc' | 'desc',
       });
     }
@@ -277,6 +312,7 @@ export function filtersToPrismaWhere(
 
 /**
  * Convert sort options to Prisma orderBy clause
+ * Validates all field names before constructing the orderBy clause
  */
 export function sortToPrismaOrderBy(
   sort: SortOption[],
@@ -284,6 +320,11 @@ export function sortToPrismaOrderBy(
   if (sort.length === 0) {
     return {};
   }
+
+  // Validate all fields before processing
+  sort.forEach((s) => {
+    validateSortField(s.field);
+  });
 
   if (sort.length === 1) {
     return { [sort[0].field]: sort[0].direction };

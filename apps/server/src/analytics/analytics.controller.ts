@@ -9,13 +9,18 @@ import {
   CategoryData,
   DailyData,
 } from './analytics.service';
+import {
+  OverviewQueryDto,
+  MonthlyQueryDto,
+  CategoriesQueryDto,
+  DailySpendingQueryDto,
+} from './dto/analytics-query.dto';
 
 // Use DevThrottlerGuard which disables throttling in development
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
 @Throttle({
   default: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 200 : Number.MAX_SAFE_INTEGER,
+    limit: process.env.NODE_ENV === 'production' ? 30 : Number.MAX_SAFE_INTEGER,
     ttl: 60_000, // 1 minute
   },
   long: {
@@ -23,7 +28,7 @@ import {
       process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
     ttl: 3_600_000, // 1 hour
   },
-}) // 200 requests per minute, 1000 requests per hour in production
+}) // Stricter rate limits: 30 requests per minute, 1000 requests per hour in production
 @Controller('v1/analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
@@ -31,12 +36,11 @@ export class AnalyticsController {
   @Get('overview')
   getOverview(
     @Req() req: { user: { userId: string } },
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query() query: OverviewQueryDto,
   ): Promise<OverviewResponse> {
     const dateRange = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
     };
 
     return this.analyticsService.getOverview(req.user.userId, dateRange);
@@ -45,18 +49,16 @@ export class AnalyticsController {
   @Get('monthly')
   getMonthly(
     @Req() req: { user: { userId: string } },
-    @Query('months') months?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query() query: MonthlyQueryDto,
   ): Promise<MonthlyData[]> {
     const dateRange = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
     };
 
     return this.analyticsService.getMonthly(
       req.user.userId,
-      months ? Number(months) : 12,
+      query.months ?? 12,
       dateRange,
     );
   }
@@ -64,12 +66,11 @@ export class AnalyticsController {
   @Get('categories')
   getCategories(
     @Req() req: { user: { userId: string } },
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+    @Query() query: CategoriesQueryDto,
   ): Promise<CategoryData[]> {
     const dateRange = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
     };
 
     return this.analyticsService.getCategories(req.user.userId, dateRange);
@@ -78,15 +79,12 @@ export class AnalyticsController {
   @Get('daily')
   getDailySpending(
     @Req() req: { user: { userId: string } },
-    @Query('year') year?: string,
-    @Query('month') month?: string,
+    @Query() query: DailySpendingQueryDto,
   ): Promise<DailyData[]> {
-    const yearNum = year ? Number(year) : undefined;
-    const monthNum = month ? Number(month) : undefined;
     return this.analyticsService.getDailySpending(
       req.user.userId,
-      yearNum,
-      monthNum,
+      query.year,
+      query.month,
     );
   }
 }

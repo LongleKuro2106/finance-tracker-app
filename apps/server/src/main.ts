@@ -90,9 +90,10 @@ async function bootstrap() {
           });
         }
 
-        // Set permissive CORS headers for internal requests
-        // Wildcard origin acceptable for server-to-server (no credentials required)
-        res.header('Access-Control-Allow-Origin', '*');
+        // Set CORS headers for internal requests
+        // Use specific origin from request or default to 'self' for security
+        const origin = req.headers.origin || req.headers.host;
+        res.header('Access-Control-Allow-Origin', origin || "'self'");
         // Credentials header omitted: internal requests use proxy-based authentication
 
         // Mark request as processed to bypass subsequent CORS middleware

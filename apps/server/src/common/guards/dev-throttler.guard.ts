@@ -33,13 +33,7 @@ export class DevThrottlerGuard extends ThrottlerGuard {
       return true;
     }
 
-    // Skip throttling for budget routes (user-specific data, no abuse risk)
-    const request = context.switchToHttp().getRequest<Request>();
-    const url = request.url || '';
-    if (url.includes('/v1/budgets')) {
-      return true;
-    }
-
+    // All endpoints should be rate limited in production
     return super.shouldSkip(context);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -142,7 +142,18 @@ export class TransactionsService {
 
     // Resolve category name to ID
     // If no category provided, default to "Uncategorized" so transactions appear in charts
-    const categoryNameToUse = dto.categoryName || 'Uncategorized';
+    let categoryNameToUse = dto.categoryName || 'Uncategorized';
+
+    // Validate category name length (max 100 characters)
+    if (categoryNameToUse.length > 100) {
+      throw new BadRequestException(
+        'Category name cannot exceed 100 characters',
+      );
+    }
+
+    // Trim whitespace before query
+    categoryNameToUse = categoryNameToUse.trim();
+
     const category = await this.categoriesService.findByName(categoryNameToUse);
     const categoryId = category.id;
 
@@ -207,8 +218,17 @@ export class TransactionsService {
             await this.categoriesService.findByName('Uncategorized');
           updateData.category = { connect: { id: category.id } };
         } else {
+          // Validate category name length (max 100 characters)
+          if (dto.categoryName.length > 100) {
+            throw new BadRequestException(
+              'Category name cannot exceed 100 characters',
+            );
+          }
+
+          // Trim whitespace before query
+          const trimmedCategoryName = dto.categoryName.trim();
           const category = await this.categoriesService.findByName(
-            dto.categoryName,
+            trimmedCategoryName,
           );
           updateData.category = { connect: { id: category.id } };
         }

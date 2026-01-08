@@ -54,6 +54,84 @@ export class BudgetsService {
   }
 
   /**
+   * Batch get total expenses for multiple months
+   * Optimized to reduce database queries
+   */
+  private async getTotalExpensesForMonths(
+    userId: string,
+    monthYearPairs: Array<{ month: number; year: number }>,
+  ): Promise<Map<string, number>> {
+    if (monthYearPairs.length === 0) {
+      return new Map();
+    }
+
+    // Execute all expense queries in parallel
+    const expensePromises = monthYearPairs.map(async ({ month, year }) => {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0); // Last day of the month
+
+      const expenses = await this.prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: {
+          userId,
+          type: 'expense',
+          date: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      });
+
+      const key = `${year}-${month}`;
+      const spent = expenses._sum.amount?.toNumber() || 0;
+      return { key, spent };
+    });
+
+    const results = await Promise.all(expensePromises);
+    const expensesMap = new Map<string, number>();
+
+    results.forEach(({ key, spent }) => {
+      expensesMap.set(key, spent);
+    });
+
+    return expensesMap;
+  }
+
+  /**
+   * Calculate budget status from spent and budget amounts
+   */
+  private calculateBudgetStatus(
+    spent: number,
+    budgetAmount: number,
+  ): {
+    exceeded: boolean;
+    message?: string;
+    spent: number;
+    budget: number;
+  } {
+    const exceeded = spent > budgetAmount;
+
+    let message: string | undefined;
+    if (exceeded) {
+      const overAmount = spent - budgetAmount;
+      message = `Budget exceeded! You've spent $${spent.toFixed(2)} out of $${budgetAmount.toFixed(2)}. You are $${overAmount.toFixed(2)} over budget.`;
+    } else {
+      const remaining = budgetAmount - spent;
+      const percentage = (spent / budgetAmount) * 100;
+      if (percentage >= 90) {
+        message = `Warning: You've used ${percentage.toFixed(1)}% of your budget. $${remaining.toFixed(2)} remaining.`;
+      }
+    }
+
+    return {
+      exceeded,
+      message,
+      spent,
+      budget: budgetAmount,
+    };
+  }
+
+  /**
    * Check if spending exceeds budget and return warning if needed
    */
   async checkBudgetStatus(
@@ -82,26 +160,8 @@ export class BudgetsService {
 
     const spent = await this.getTotalExpensesForMonth(userId, month, year);
     const budgetAmount = budget.amount.toNumber();
-    const exceeded = spent > budgetAmount;
 
-    let message: string | undefined;
-    if (exceeded) {
-      const overAmount = spent - budgetAmount;
-      message = `Budget exceeded! You've spent $${spent.toFixed(2)} out of $${budgetAmount.toFixed(2)}. You are $${overAmount.toFixed(2)} over budget.`;
-    } else {
-      const remaining = budgetAmount - spent;
-      const percentage = (spent / budgetAmount) * 100;
-      if (percentage >= 90) {
-        message = `Warning: You've used ${percentage.toFixed(1)}% of your budget. $${remaining.toFixed(2)} remaining.`;
-      }
-    }
-
-    return {
-      exceeded,
-      message,
-      spent,
-      budget: budgetAmount,
-    };
+    return this.calculateBudgetStatus(spent, budgetAmount);
   }
 
   /**
@@ -148,6 +208,7 @@ export class BudgetsService {
 
   /**
    * Get all budgets for a user
+   * Optimized to batch expense queries and eliminate N+1 problem
    */
   async findAll(userId: string) {
     const budgets = await this.prisma.budget.findMany({
@@ -155,21 +216,35 @@ export class BudgetsService {
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
 
-    // Get status for each budget
-    const budgetsWithStatus = await Promise.all(
-      budgets.map(async (budget) => {
-        const status = await this.checkBudgetStatus(
-          userId,
-          budget.month,
-          budget.year,
-        );
-        return {
-          ...budget,
-          amount: budget.amount.toNumber(),
-          status,
-        };
-      }),
+    if (budgets.length === 0) {
+      return [];
+    }
+
+    // Extract unique month/year pairs for batch querying
+    const monthYearPairs = budgets.map((budget) => ({
+      month: budget.month,
+      year: budget.year,
+    }));
+
+    // Batch query expenses for all budgets in parallel
+    const expensesMap = await this.getTotalExpensesForMonths(
+      userId,
+      monthYearPairs,
     );
+
+    // Map expenses to budgets and calculate status
+    const budgetsWithStatus = budgets.map((budget) => {
+      const key = `${budget.year}-${budget.month}`;
+      const spent = expensesMap.get(key) ?? 0;
+      const budgetAmount = budget.amount.toNumber();
+      const status = this.calculateBudgetStatus(spent, budgetAmount);
+
+      return {
+        ...budget,
+        amount: budgetAmount,
+        status,
+      };
+    });
 
     return budgetsWithStatus;
   }

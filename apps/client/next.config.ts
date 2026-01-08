@@ -1,15 +1,28 @@
 import type { NextConfig } from "next";
 
+// Conditionally apply CSP directives based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production, use strict CSP without unsafe directives
+// In development, allow unsafe directives for Next.js dev mode and Tailwind
+const scriptSrc = isProduction
+  ? "script-src 'self'"
+  : "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
+
+const styleSrc = isProduction
+  ? "style-src 'self'"
+  : "style-src 'self' 'unsafe-inline'";
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // 'unsafe-eval' needed for Next.js dev mode
-      "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' needed for Tailwind
+      scriptSrc,
+      styleSrc,
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'} https://*`, // Allow API calls to backend
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}`, // Allow API calls to backend only
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
