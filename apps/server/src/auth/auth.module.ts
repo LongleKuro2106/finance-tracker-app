@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
@@ -28,10 +27,8 @@ import { RefreshTokenService } from '../common/services/refresh-token.service';
         })(),
       signOptions: { expiresIn: '60m' },
     }),
-    ThrottlerModule.forRoot([
-      { name: 'short', ttl: 60_000, limit: 5 },
-      { name: 'long', ttl: 3_600_000, limit: 20 },
-    ]),
+    // ThrottlerModule is configured globally in AppModule
+    // No need to import it here to avoid conflicts
   ],
   controllers: [AuthController],
   providers: [

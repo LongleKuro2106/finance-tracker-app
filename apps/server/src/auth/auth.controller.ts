@@ -82,11 +82,13 @@ export class AuthController {
   }
 
   @Put('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, DevThrottlerGuard)
+  @Throttle(RATE_LIMITS.auth)
   updateProfile(
     @CurrentUser() user: authenticatedUserInterface.AuthenticatedUser,
     @Body(ValidationPipe) updateProfileDto: UpdateProfileDto,
   ) {
+    // SECURITY: Rate limiting prevents brute force attacks on password updates
     return this.authService.updateProfile(user.userId, updateProfileDto);
   }
 

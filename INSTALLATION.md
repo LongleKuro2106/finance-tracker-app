@@ -72,6 +72,14 @@ npm install
    REFRESH_SECRET=your_refresh_token_secret_here_minimum_32_characters_long
    INTERNAL_SECRET=your_internal_secret_for_server_to_server_auth_minimum_32_characters_long
 
+   # Optional: Bcrypt password hashing rounds (defaults: 12 for production, 10 for development)
+   # Higher values = more secure but slower (recommended: 12-14 for production)
+   # BCRYPT_ROUNDS=12
+
+   # Optional: Rate limiting control (defaults: enabled in production, disabled in development)
+   # Set to 'false' to disable rate limiting (NOT recommended for production)
+   # ENABLE_RATE_LIMITING=true
+
    # CORS configuration
    ALLOWED_ORIGINS=http://localhost:3000
 
@@ -586,30 +594,61 @@ docker-compose build 2>&1 | tee build.log
 
 ---
 
+## Security Configuration
+
+### Rate Limiting
+
+The application implements rate limiting to protect against abuse and ensure fair usage:
+
+- **Auth Endpoints** (signup, login, refresh, password update):
+  - Production: 5 requests per minute
+  - Development: 20 requests per minute (if enabled)
+
+- **Transaction Endpoints**:
+  - Production: 200 requests/minute, 1000 requests/hour
+  - Development: 500 requests/minute, 2000 requests/hour (if enabled)
+
+- **Budget Endpoints**:
+  - Production: 50 requests/minute, 200 requests/hour
+  - Development: 100 requests/minute, 500 requests/hour (if enabled)
+
+- **Analytics Endpoints**:
+  - Production: 30 requests/minute, 1000 requests/hour
+  - Development: 60 requests/minute, 2000 requests/hour (if enabled)
+
+**Rate Limiting Behavior:**
+- **Production:** Enabled by default (unless `ENABLE_RATE_LIMITING=false`)
+- **Development:** Disabled by default (enable with `ENABLE_RATE_LIMITING=true`)
+- Rate limiting uses user-based tracking for authenticated requests (per-user limits)
+- Falls back to IP-based tracking for unauthenticated requests
+
+### Password Security
+
+- **Password Complexity Requirements:**
+  - Minimum 12 characters (signup) or 8 characters (update)
+  - Must contain: uppercase letter, lowercase letter, number, and special character
+  - Maximum 72 characters (bcrypt limit)
+
+- **Password Hashing:**
+  - Uses bcrypt with configurable cost factor
+  - Production default: 12 rounds (~300-500ms per hash)
+  - Development default: 10 rounds (~100ms per hash)
+  - Can be configured via `BCRYPT_ROUNDS` environment variable (4-31 range)
+
+### Cookie Security
+
+- **SameSite Policy:** `strict` (stronger CSRF protection)
+- **HttpOnly:** Enabled (prevents JavaScript access)
+- **Secure Flag:** Enabled in production (HTTPS only)
+- **Path:** `/` (applies to entire site)
+
 ## Rate Limiting & Performance
 
 ### Rate Limits (Production)
 
-The application implements rate limiting to protect against abuse and ensure fair usage:
+See [Security Configuration](#security-configuration) section above for detailed rate limits.
 
-- **Auth Endpoints** (signup, login, refresh):
-  - 5 requests per minute
-  - 20 requests per hour
-  - IP-based throttling
-
-- **Transaction Endpoints**:
-  - 200 requests per minute
-  - 1000 requests per hour
-
-- **Budget Endpoints**:
-  - 200 requests per minute
-  - 1000 requests per hour
-
-- **Analytics Endpoints**:
-  - 200 requests per minute
-  - 1000 requests per hour
-
-**Note:** Rate limiting is **disabled in development** (`NODE_ENV=development`) to allow easier testing. It is automatically enabled in production.
+**Note:** Rate limiting defaults to **enabled in production** and **disabled in development** for easier testing. You can override this behavior with the `ENABLE_RATE_LIMITING` environment variable.
 
 ### Performance Optimizations
 

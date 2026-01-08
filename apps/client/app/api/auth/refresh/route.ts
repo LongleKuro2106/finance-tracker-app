@@ -31,12 +31,13 @@ export const POST = async () => {
   }
 
   // Store new tokens
+  // SECURITY: SameSite=strict provides stronger CSRF protection
   // Note: secure flag should be true only with HTTPS
   // For local network testing, set SECURE_COOKIES=false
   const isSecure = process.env.SECURE_COOKIES !== 'false' && process.env.NODE_ENV === 'production'
   cookieStore.set(ACCESS_TOKEN_COOKIE_NAME, tokens.accessToken, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict', // Stronger CSRF protection than 'lax'
     secure: isSecure,
     path: '/',
     maxAge: 60 * 60, // 1 hour
@@ -44,7 +45,7 @@ export const POST = async () => {
 
   cookieStore.set(REFRESH_TOKEN_COOKIE_NAME, tokens.refreshToken, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict', // Stronger CSRF protection than 'lax'
     secure: isSecure,
     path: '/',
     maxAge: 7 * 24 * 60 * 60, // 7 days

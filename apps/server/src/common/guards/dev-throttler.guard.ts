@@ -1,5 +1,7 @@
-import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { Injectable, ExecutionContext, Logger, Inject } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerStorage } from '@nestjs/throttler';
+import type { ThrottlerModuleOptions } from '@nestjs/throttler';
 import { Request } from 'express';
 
 /**
@@ -13,15 +15,24 @@ export class DevThrottlerGuard extends ThrottlerGuard {
   private readonly logger = new Logger(DevThrottlerGuard.name);
   private readonly isRateLimitingEnabled: boolean;
 
-  constructor(...args: ConstructorParameters<typeof ThrottlerGuard>) {
-    super(...args);
-    // SECURITY: Use explicit environment variable instead of relying on NODE_ENV
-    // This prevents accidental disabling of rate limiting in production
+  constructor(
+    @Inject('THROTTLER_OPTIONS')
+    protected readonly options: ThrottlerModuleOptions,
+    @Inject('ThrottlerStorage')
+    protected readonly storageService: ThrottlerStorage,
+    protected readonly reflector: Reflector,
+  ) {
+    super(options, storageService, reflector);
+    // SECURITY: Rate limiting defaults to enabled in production, disabled in development
+    // In production: enabled by default unless explicitly disabled (ENABLE_RATE_LIMITING=false)
+    // In development: disabled by default unless explicitly enabled (ENABLE_RATE_LIMITING=true)
+    // This prevents accidental disabling of rate limiting in production environments
     const enableRateLimiting = process.env.ENABLE_RATE_LIMITING;
-    this.isRateLimitingEnabled =
-      enableRateLimiting === 'true' ||
-      (enableRateLimiting === undefined &&
-        process.env.NODE_ENV === 'production');
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    this.isRateLimitingEnabled = isProduction
+      ? enableRateLimiting !== 'false' // Default to enabled in production
+      : enableRateLimiting === 'true'; // Must explicitly enable in development
 
     if (!this.isRateLimitingEnabled) {
       this.logger.warn(

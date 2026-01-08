@@ -169,33 +169,41 @@ async function bootstrap() {
   );
 
   // Security headers middleware: HTTP security policy enforcement
+  // These headers protect against common web vulnerabilities
   app.use(
     helmet({
+      // Content Security Policy: Prevents XSS attacks by restricting resource loading
+      // API server does not serve HTML/CSS/JS content, so policies are restrictive
       contentSecurityPolicy: {
         directives: {
-          defaultSrc: ["'self'"],
+          defaultSrc: ["'self'"], // Only allow resources from same origin
           // Restrict style sources to prevent CSS injection attacks
           // API server does not serve HTML/CSS content
           styleSrc: ["'self'"],
           // Restrict script sources: API server does not serve JavaScript
           scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
+          imgSrc: ["'self'", 'data:', 'https:'], // Allow images from same origin, data URIs, and HTTPS
         },
       },
+      // Cross-Origin Embedder Policy: Disabled for API server (not needed)
       crossOriginEmbedderPolicy: false,
+      // HTTP Strict Transport Security: Forces HTTPS connections
+      // Prevents man-in-the-middle attacks and protocol downgrade attacks
       hsts: {
-        maxAge: 31536000, // HTTP Strict Transport Security: 1 year (seconds)
-        includeSubDomains: true,
-        preload: true,
+        maxAge: 31536000, // 1 year in seconds
+        includeSubDomains: true, // Apply to all subdomains
+        preload: true, // Allow inclusion in browser HSTS preload lists
       },
     }),
   );
 
   // Additional security headers not covered by Helmet defaults
   app.use((req: Request, res: express.Response, next: express.NextFunction) => {
-    // Prevent MIME type sniffing
+    // X-Content-Type-Options: Prevents MIME type sniffing attacks
+    // Forces browser to respect Content-Type header, preventing XSS via file uploads
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    // Prevent clickjacking attacks
+    // X-Frame-Options: Prevents clickjacking attacks
+    // DENY prevents page from being embedded in iframe on any site
     res.setHeader('X-Frame-Options', 'DENY');
     // Control referrer information leakage
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

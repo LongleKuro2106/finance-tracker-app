@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { hash } from 'bcrypt';
+import { BCRYPT_ROUNDS } from '../common/config/bcrypt.config';
 
 @Injectable()
 export class UsersService {
@@ -73,10 +74,11 @@ export class UsersService {
         updateData.email = updateUserDto.email;
       }
       if (updateUserDto.password !== undefined) {
+        // SECURITY: Use configurable bcrypt rounds for password updates
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         updateData.passwordHash = (await hash(
           updateUserDto.password,
-          10,
+          BCRYPT_ROUNDS,
         )) as string;
       }
 

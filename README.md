@@ -156,20 +156,47 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 
 ## 🔒 Security Features
 
-- JWT authentication with token rotation
-- HttpOnly cookies for secure token storage
-- Rate limiting on all endpoints: 200 requests/minute, 1000 requests/hour (disabled in development)
-- Input validation and sanitization
-- HTML/Script sanitization (DOMPurify) for user input
-- SQL injection prevention via Prisma ORM
-- UUID-based transaction IDs (prevents enumeration)
+### Authentication & Authorization
+- JWT authentication with token rotation and version management
+- HttpOnly cookies with SameSite=strict for secure token storage
+- Refresh token rotation on each use
 - Account lockout after failed attempts (5 attempts → 15min lockout)
-- Comprehensive audit logging
-- Security headers (CSP, HSTS, X-Frame-Options, etc.)
-- CORS configuration with environment-based origins
+- Password complexity requirements (12+ chars, uppercase, lowercase, number, special char)
+- Bcrypt password hashing with configurable cost factor (12 rounds in production, 10 in development)
+- Timing attack prevention via dummy password comparison
+
+### Rate Limiting & DoS Protection
+- Rate limiting on all endpoints (enabled by default in production)
+  - Auth endpoints: 5 requests/minute
+  - Transaction endpoints: 200 requests/minute, 1000/hour
+  - Budget endpoints: 50 requests/minute, 200/hour
+  - Analytics endpoints: 30 requests/minute, 1000/hour
+- Rate limiting on password update endpoint (prevents brute force attacks)
 - Request deduplication (prevents duplicate API calls)
-- Token refresh caching (reduces unnecessary refresh calls)
+- Query string length limits and filter operator limits
+
+### Input Validation & Sanitization
+- Comprehensive DTO validation with class-validator
+- HTML/Script sanitization (sanitize-html) for user input
+- XSS protection via client-side HTML escaping
+- SQL injection prevention via Prisma ORM parameterized queries
+- UUID validation before database operations
+
+### Security Headers
+- Content Security Policy (CSP) - Prevents XSS attacks
+- Strict-Transport-Security (HSTS) - Forces HTTPS connections
+- X-Frame-Options: DENY - Prevents clickjacking attacks
+- X-Content-Type-Options: nosniff - Prevents MIME type sniffing
+- Referrer-Policy - Controls referrer information leakage
+- Permissions-Policy - Disables unnecessary browser features
+
+### Additional Security Measures
+- UUID-based transaction IDs (prevents enumeration)
+- CORS configuration with environment-based origin whitelist
+- Comprehensive audit logging for security events
 - User-friendly error messages without exposing server internals
+- Token refresh caching (reduces unnecessary refresh calls)
+- Environment variable validation at startup
 
 ## ⚡ Performance Optimizations
 

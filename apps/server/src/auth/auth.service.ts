@@ -18,6 +18,7 @@ import {
   type AuditLogEntry,
 } from '../common/services/audit-logger.service';
 import { RefreshTokenService } from '../common/services/refresh-token.service';
+import { BCRYPT_ROUNDS } from '../common/config/bcrypt.config';
 
 interface SignupInput {
   username: string;
@@ -62,8 +63,10 @@ export class AuthService {
     if (existing)
       throw new ConflictException('Username or email already exists');
 
+    // SECURITY: Use configurable bcrypt rounds (defaults to 12 in production, 10 in development)
+    // Higher cost factor provides better protection against GPU-based brute force attacks
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const passwordHash: string = (await hash(input.password, 10)) as string;
+    const passwordHash: string = (await hash(input.password, BCRYPT_ROUNDS)) as string;
 
     const created = await this.prisma.user.create({
       data: {
@@ -458,10 +461,11 @@ export class AuthService {
     }
 
     if (updateData.password !== undefined) {
+      // SECURITY: Use configurable bcrypt rounds for password updates
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       updatePayload.passwordHash = (await hash(
         updateData.password,
-        10,
+        BCRYPT_ROUNDS,
       )) as string;
     }
 
@@ -531,10 +535,12 @@ export class AuthService {
    * Generate a dummy bcrypt hash for timing attack prevention
    * Creates a valid bcrypt hash that will always fail comparison
    * Matches the format and timing characteristics of real bcrypt hashes
+   * Uses the same cost factor as real passwords to maintain consistent timing
    */
   private async generateDummyHash(): Promise<string> {
-    // Generate a salt with the same cost factor as real passwords (10 rounds)
-    const salt = await genSalt(10);
+    // SECURITY: Use same cost factor as real passwords to prevent timing attacks
+    // This ensures consistent execution time regardless of user existence
+    const salt = await genSalt(BCRYPT_ROUNDS);
     // Hash a dummy password to create a valid bcrypt hash format
     // This ensures the hash format matches current bcrypt standards
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
