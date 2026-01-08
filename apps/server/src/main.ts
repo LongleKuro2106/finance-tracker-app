@@ -1,46 +1,31 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import * as express from 'express';
 import cors from 'cors';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { Request } from 'express';
+import { getEnvConfig } from './common/config/env-validation.config';
+import { AppLoggerService } from './common/services/logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Validate all environment variables at startup
+  const envConfig = getEnvConfig();
+
+  // Initialize logger service for secure logging
+  const logger = new Logger('Bootstrap');
+  const appLogger = new AppLoggerService();
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: appLogger,
+  });
 
   // Configure Express to trust the first proxy hop for accurate client IP extraction
   // Required for rate limiting, audit logging, and security enforcement
   app.set('trust proxy', 1);
 
-  // CORS origin whitelist configuration
-  // Parses ALLOWED_ORIGINS environment variable or defaults to localhost in development
-  const allowedOrigins = (() => {
-    const origins = process.env.ALLOWED_ORIGINS;
-    if (!origins) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'ALLOWED_ORIGINS environment variable is required in production',
-        );
-      }
-      return ['http://localhost:3000']; // Development default: localhost only
-    }
-    // Normalize origin strings: trim whitespace and remove trailing slashes
-    // CORS origin matching requires exact string equality per RFC 6454
-    return origins
-      .split(',')
-      .map((origin) => origin.trim().replace(/\/+$/, ''));
-  })();
-
-  // Shared secret for authenticating server-to-server requests
-  // Prevents external clients from spoofing internal request headers
-  const internalSecret = process.env.INTERNAL_SECRET;
-  if (!internalSecret && process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'INTERNAL_SECRET environment variable is required in production',
-    );
-  }
+  const { allowedOrigins, internalSecret } = envConfig;
 
   // Access underlying Express instance for direct middleware control
   const expressApp = app.getHttpAdapter().getInstance();
@@ -105,6 +90,8 @@ async function bootstrap() {
   );
 
   // CORS middleware configuration for cross-origin browser requests
+  // SECURITY: CSRF protection via Origin header validation
+  // Only whitelisted origins are allowed, preventing CSRF attacks from other domains
   const corsMiddleware = cors({
     origin: (
       origin: string | undefined,
@@ -112,29 +99,29 @@ async function bootstrap() {
     ) => {
       if (!origin) {
         // Requests without Origin header are server-to-server
-        // Development mode: permit for testing convenience
-        if (process.env.NODE_ENV !== 'production') {
-          callback(null, true);
-          return;
-        }
-        // Production mode: reject (internal requests handled by prior middleware)
+        // All environments require Origin header for browser requests
+        // Internal requests are handled by prior middleware
         callback(new Error('CORS Error: Origin required'));
         return;
       }
 
-      // Normalize origin string for exact matching (remove trailing slashes)
+      // SECURITY: Normalize origin string for exact matching (remove trailing slashes)
+      // CORS origin matching requires exact string equality per RFC 6454
       const normalizedOrigin = origin.replace(/\/+$/, '');
 
-      // Validate origin against whitelist
+      // SECURITY: Validate origin against whitelist
       // Only whitelisted origins are permitted for cross-origin requests
+      // This prevents CSRF attacks from unauthorized origins
       if (allowedOrigins.indexOf(normalizedOrigin) !== -1) {
         callback(null, true);
       } else {
-        // Return generic error to prevent information disclosure
+        // SECURITY: Return generic error to prevent information disclosure
+        // Don't reveal which origins are whitelisted
         callback(new Error('CORS Error'));
       }
     },
-    credentials: true, // Enable credentials (cookies, authorization headers) for whitelisted origins
+    credentials: true, // SECURITY: Enable credentials (cookies) for whitelisted origins only
+    // SECURITY: SameSite cookie attribute (set in cookie config) provides additional CSRF protection
     // OPTIONS method included for CORS preflight handling
     // Non-preflight OPTIONS requests are rejected by prior middleware
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -145,6 +132,8 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'X-Internal-Secret', // Required for server-to-server authentication
+      // SECURITY: CSRF protection is handled via Origin header validation above
+      // Additional CSRF token header can be added here if needed
     ],
     maxAge: 86400, // Preflight cache duration: 24 hours (seconds)
   });
@@ -202,21 +191,32 @@ async function bootstrap() {
     }),
   );
 
+  // Additional security headers not covered by Helmet defaults
+  app.use((req: Request, res: express.Response, next: express.NextFunction) => {
+    // Prevent MIME type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Prevent clickjacking attacks
+    res.setHeader('X-Frame-Options', 'DENY');
+    // Control referrer information leakage
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
   // Server binding configuration: listen on all network interfaces
-  const port = process.env.PORT ?? 8000;
-  const host = process.env.HOST ?? '0.0.0.0';
-  await app.listen(port, host);
+  await app.listen(envConfig.port, envConfig.host);
 
   // Graceful shutdown handler: process signal management
   // Handles SIGTERM (container orchestration) and SIGINT (interactive termination)
   const gracefulShutdown = async (signal: string) => {
-    console.log(`\n${signal} received. Starting graceful shutdown...`);
+    logger.log(`${signal} received. Starting graceful shutdown...`);
     try {
       await app.close();
-      console.log('Application closed successfully');
+      logger.log('Application closed successfully');
       process.exit(0);
     } catch (error) {
-      console.error('Error during graceful shutdown:', error);
+      // Use logger service to sanitize error messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      appLogger.error(`Error during graceful shutdown: ${errorMessage}`, undefined, 'Bootstrap');
       process.exit(1);
     }
   };
@@ -231,15 +231,18 @@ async function bootstrap() {
   // Unhandled promise rejection handler: prevent silent failures
   process.on(
     'unhandledRejection',
-    (reason: unknown, promise: Promise<unknown>) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    (reason: unknown) => {
+      // Sanitize error messages to prevent information disclosure
+      const reasonMessage = reason instanceof Error ? reason.message : 'Unknown rejection';
+      appLogger.error(`Unhandled Rejection: ${reasonMessage}`, undefined, 'Bootstrap');
       void gracefulShutdown('unhandledRejection');
     },
   );
 
   // Uncaught exception handler: prevent application crash
   process.on('uncaughtException', (error: Error) => {
-    console.error('Uncaught Exception:', error);
+    // Use logger service to sanitize error messages
+    appLogger.error(`Uncaught Exception: ${error.message}`, error.stack, 'Bootstrap');
     void gracefulShutdown('uncaughtException');
   });
 }

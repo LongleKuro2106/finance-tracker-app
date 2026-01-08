@@ -12,26 +12,25 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { parseQuery } from '../common/utils/query-parser.util';
+import { RATE_LIMITS } from '../common/config/rate-limit.config';
+
+/**
+ * DTO for transaction ID parameter validation
+ */
+class TransactionIdDto {
+  @IsUUID(4, { message: 'Invalid transaction ID format' })
+  id!: string;
+}
 
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
-@Throttle({
-  default: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 200 : Number.MAX_SAFE_INTEGER,
-    ttl: 60_000,
-  },
-  long: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
-    ttl: 3_600_000,
-  },
-}) // 200 requests per minute, 1000 requests per hour in production
+@Throttle(RATE_LIMITS.transactions)
 @Controller('v1/transactions')
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
@@ -64,14 +63,17 @@ export class TransactionsController {
   @Put(':id')
   update(
     @Req() req: { user: { userId: string } },
-    @Param('id') id: string,
+    @Param(ValidationPipe) params: TransactionIdDto,
     @Body(ValidationPipe) body: UpdateTransactionDto,
   ) {
-    return this.service.updateForUser(req.user.userId, id, body);
+    return this.service.updateForUser(req.user.userId, params.id, body);
   }
 
   @Delete(':id')
-  remove(@Req() req: { user: { userId: string } }, @Param('id') id: string) {
-    return this.service.deleteForUser(req.user.userId, id);
+  remove(
+    @Req() req: { user: { userId: string } },
+    @Param(ValidationPipe) params: TransactionIdDto,
+  ) {
+    return this.service.deleteForUser(req.user.userId, params.id);
   }
 }

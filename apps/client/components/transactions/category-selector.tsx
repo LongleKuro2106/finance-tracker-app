@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { PARENT_CATEGORIES, CATEGORY_HIERARCHY } from '@/lib/category-utils'
+import { escapeHtml } from '@/lib/utils'
 
 // Convert category hierarchy to the format needed for the selector
 const CATEGORIES = PARENT_CATEGORIES.map((parentName) => ({
@@ -128,7 +129,7 @@ const CategorySelector = ({
         className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30 disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between"
       >
         <span className={value ? '' : 'text-neutral-500 dark:text-neutral-400'}>
-          {value || 'None'}
+          {escapeHtml(value || 'None')}
         </span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -171,7 +172,7 @@ const CategorySelector = ({
                   onClick={() => handleSelect(category.name)}
                 >
                   <div className="px-2 py-1.5 text-sm font-medium flex items-center justify-between">
-                    <span>{category.name}</span>
+                    <span>{escapeHtml(category.name)}</span>
                     {category.children.length > 0 && (
                       <svg
                         className="w-4 h-4 text-neutral-400"
@@ -209,7 +210,7 @@ const CategorySelector = ({
               >
                 <div className="p-1">
                   <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800 mb-1">
-                    {hoveredCategoryData.name}
+                    {escapeHtml(hoveredCategoryData.name)}
                   </div>
                   {hoveredCategoryData.children.map((child) => (
                     <div
@@ -221,7 +222,7 @@ const CategorySelector = ({
                       }`}
                       onClick={() => handleSelect(child)}
                     >
-                      <div className="px-2 py-1.5 text-sm">{child}</div>
+                      <div className="px-2 py-1.5 text-sm">{escapeHtml(child)}</div>
                     </div>
                   ))}
                 </div>

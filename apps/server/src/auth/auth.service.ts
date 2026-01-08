@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as jwt from 'jsonwebtoken';
-import { hash, compare } from 'bcrypt';
+import { hash, compare, genSalt } from 'bcrypt';
 import type { User } from '@prisma/client';
 import { AccountLockoutService } from '../common/services/account-lockout.service';
 import {
@@ -65,12 +65,21 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const passwordHash: string = (await hash(input.password, 10)) as string;
 
-    const created: User = await this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         username: input.username,
         email: input.email,
         passwordHash: passwordHash,
         tokenVersion: 1,
+      },
+      // Return only safe, non-sensitive fields
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+        tokenVersion: true,
       },
     });
 
@@ -97,8 +106,15 @@ export class AuthService {
       timestamp: new Date(),
     });
 
+    // Return only safe user fields (exclude passwordHash and other sensitive data)
     return {
-      user: created,
+      user: {
+        id: created.id,
+        username: created.username,
+        email: created.email,
+        createdAt: created.createdAt,
+        updatedAt: created.updatedAt,
+      },
       access_token: accessToken,
       refresh_token: refreshToken,
     };
@@ -136,9 +152,15 @@ export class AuthService {
       );
     }
 
+    // SECURITY: Timing attack prevention
     // Perform dummy password comparison for non-existent users to prevent timing attacks
     // This ensures consistent timing regardless of whether user exists
-    const dummyHash = '$2b$10$dummy.hash.for.timing.attack.prevention.xyz';
+    // Generate dummy hash dynamically to match current bcrypt format
+    const dummyHash = await this.generateDummyHash();
+
+    // SECURITY: Always perform password comparison to maintain constant-time execution
+    // This prevents attackers from determining user existence via timing differences
+    let passwordComparisonPromise: Promise<boolean>;
 
     if (!user) {
       // Record failed attempt even if user doesn't exist (to prevent enumeration)
@@ -146,10 +168,26 @@ export class AuthService {
         input.usernameOrEmail,
       );
 
-      // Perform dummy password comparison to maintain consistent timing
+      // SECURITY: Perform dummy password comparison to maintain consistent timing
+      // This ensures the same execution time whether user exists or not
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      await compare(input.password, dummyHash);
+      passwordComparisonPromise = compare(input.password, dummyHash) as Promise<boolean>;
+    } else {
+      // SECURITY: Perform actual password comparison
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      passwordComparisonPromise = compare(
+        input.password,
+        user.passwordHash,
+      ) as Promise<boolean>;
+    }
 
+    // SECURITY: Wait for password comparison to complete before checking result
+    // This ensures consistent timing regardless of code path
+    const valid = await passwordComparisonPromise;
+
+    if (!user) {
+      // SECURITY: Throw generic error after password comparison completes
+      // This maintains consistent timing and prevents user enumeration
       this.auditLogger.logLoginFailure(
         input.usernameOrEmail,
         'Invalid username or email',
@@ -161,12 +199,8 @@ export class AuthService {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const valid: boolean = (await compare(
-      input.password,
-      user.passwordHash,
-    )) as boolean;
-
+    // SECURITY: Continue with actual user validation
+    // Note: valid is already checked above via passwordComparisonPromise
     if (!valid) {
       const lockoutResult =
         await this.accountLockoutService.recordFailedAttempt(
@@ -194,8 +228,9 @@ export class AuthService {
         );
       }
 
+      // Use generic error message to prevent information disclosure
       throw new UnauthorizedException(
-        `You have entered an invalid username or password. ${lockoutResult.remainingAttempts} attempt(s) remaining.`,
+        'You have entered an invalid username or password',
       );
     }
 
@@ -490,6 +525,20 @@ export class AuthService {
     await this.prisma.user.delete({
       where: { id: userId },
     });
+  }
+
+  /**
+   * Generate a dummy bcrypt hash for timing attack prevention
+   * Creates a valid bcrypt hash that will always fail comparison
+   * Matches the format and timing characteristics of real bcrypt hashes
+   */
+  private async generateDummyHash(): Promise<string> {
+    // Generate a salt with the same cost factor as real passwords (10 rounds)
+    const salt = await genSalt(10);
+    // Hash a dummy password to create a valid bcrypt hash format
+    // This ensures the hash format matches current bcrypt standards
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    return (await hash('dummy_password_for_timing_attack_prevention', salt)) as string;
   }
 
   private signToken(

@@ -1,27 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-
-interface FailedLoginAttempt {
-  count: number;
-  lastAttempt: Date;
-  lockedUntil?: Date;
-}
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AccountLockoutService {
-  // In-memory store for failed login attempts
-  // In production, consider using Redis for distributed systems
-  private readonly failedAttempts = new Map<string, FailedLoginAttempt>();
-
+  // Uses database storage for horizontal scaling and persistent lockout state
   private readonly MAX_FAILED_ATTEMPTS = 5;
   private readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+  private cleanupIntervalId: NodeJS.Timeout | null = null;
 
   constructor(private readonly prisma: PrismaService) {
     // Cleanup old entries every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    this.cleanupIntervalId = setInterval(() => {
+      void this.cleanup();
+    }, 5 * 60 * 1000);
   }
 
-  recordFailedAttempt(
+  /**
+   * Record a failed login attempt
+   * Uses database storage for persistent lockout tracking across instances
+   */
+  async recordFailedAttempt(
     usernameOrEmail: string,
     userId?: string,
   ): Promise<{
@@ -29,98 +28,154 @@ export class AccountLockoutService {
     remainingAttempts: number;
     lockedUntil?: Date;
   }> {
-    const key = userId || usernameOrEmail;
+    const identifier = userId || usernameOrEmail;
     const now = new Date();
-    const attempt = this.failedAttempts.get(key);
 
-    if (attempt?.lockedUntil && attempt.lockedUntil > now) {
-      // Still locked
-      return Promise.resolve({
+    // Find or create lockout record
+    let lockout = await this.prisma.accountLockout.findUnique({
+      where: { identifier },
+    });
+
+    // Check if account is currently locked
+    if (lockout?.lockedUntil && lockout.lockedUntil > now) {
+      return {
         isLocked: true,
         remainingAttempts: 0,
-        lockedUntil: attempt.lockedUntil,
-      });
+        lockedUntil: lockout.lockedUntil,
+      };
     }
 
     // Reset if lockout expired
-    if (attempt?.lockedUntil && attempt.lockedUntil <= now) {
-      this.failedAttempts.delete(key);
+    if (lockout?.lockedUntil && lockout.lockedUntil <= now) {
+      await this.prisma.accountLockout.delete({
+        where: { identifier },
+      });
+      lockout = null;
     }
 
-    const newAttempt: FailedLoginAttempt = attempt
-      ? {
-          count: attempt.count + 1,
+    // Increment attempt count or create new record
+    const newAttemptCount = lockout ? lockout.attemptCount + 1 : 1;
+    const lockedUntil =
+      newAttemptCount >= this.MAX_FAILED_ATTEMPTS
+        ? new Date(now.getTime() + this.LOCKOUT_DURATION_MS)
+        : null;
+
+    if (lockout) {
+      // Update existing record
+      lockout = await this.prisma.accountLockout.update({
+        where: { identifier },
+        data: {
+          attemptCount: newAttemptCount,
           lastAttempt: now,
-        }
-      : {
-          count: 1,
+          lockedUntil,
+          userId: userId || lockout.userId,
+        },
+      });
+    } else {
+      // Create new record
+      lockout = await this.prisma.accountLockout.create({
+        data: {
+          id: randomUUID(),
+          identifier,
+          userId: userId || null,
+          attemptCount: newAttemptCount,
           lastAttempt: now,
-        };
-
-    // Lock account if max attempts reached
-    if (newAttempt.count >= this.MAX_FAILED_ATTEMPTS) {
-      newAttempt.lockedUntil = new Date(
-        now.getTime() + this.LOCKOUT_DURATION_MS,
-      );
-      this.failedAttempts.set(key, newAttempt);
-
-      // If we have userId, update user record (optional - for persistence)
-      if (userId) {
-        // You could add a lockedUntil field to User model if needed
-        // await this.prisma.user.update({
-        //   where: { id: userId },
-        //   data: { lockedUntil: newAttempt.lockedUntil },
-        // });
-      }
-
-      return Promise.resolve({
-        isLocked: true,
-        remainingAttempts: 0,
-        lockedUntil: newAttempt.lockedUntil,
+          lockedUntil,
+        },
       });
     }
 
-    this.failedAttempts.set(key, newAttempt);
+    if (lockedUntil) {
+      return {
+        isLocked: true,
+        remainingAttempts: 0,
+        lockedUntil,
+      };
+    }
 
-    return Promise.resolve({
+    return {
       isLocked: false,
-      remainingAttempts: this.MAX_FAILED_ATTEMPTS - newAttempt.count,
+      remainingAttempts: this.MAX_FAILED_ATTEMPTS - newAttemptCount,
+    };
+  }
+
+  /**
+   * Clear failed attempts for a user
+   * Uses database deletion for persistent state management
+   */
+  async clearFailedAttempts(
+    usernameOrEmail: string,
+    userId?: string,
+  ): Promise<void> {
+    const identifier = userId || usernameOrEmail;
+    await this.prisma.accountLockout.deleteMany({
+      where: { identifier },
     });
   }
 
-  clearFailedAttempts(usernameOrEmail: string, userId?: string): Promise<void> {
-    const key = userId || usernameOrEmail;
-    this.failedAttempts.delete(key);
-    return Promise.resolve();
-  }
+  /**
+   * Check if account is locked
+   * Uses database lookup for consistent lockout state across instances
+   */
+  async isLocked(usernameOrEmail: string, userId?: string): Promise<boolean> {
+    const identifier = userId || usernameOrEmail;
+    const lockout = await this.prisma.accountLockout.findUnique({
+      where: { identifier },
+    });
 
-  isLocked(usernameOrEmail: string, userId?: string): Promise<boolean> {
-    const key = userId || usernameOrEmail;
-    const attempt = this.failedAttempts.get(key);
-
-    if (!attempt?.lockedUntil) {
-      return Promise.resolve(false);
+    if (!lockout?.lockedUntil) {
+      return false;
     }
 
-    if (attempt.lockedUntil <= new Date()) {
-      // Lockout expired, clean up
-      this.failedAttempts.delete(key);
-      return Promise.resolve(false);
-    }
-
-    return Promise.resolve(true);
-  }
-
-  private cleanup(): void {
     const now = new Date();
-    for (const [key, attempt] of this.failedAttempts.entries()) {
-      // Remove if locked until expired and no recent attempts (older than 1 hour)
-      if (
-        (!attempt.lockedUntil || attempt.lockedUntil <= now) &&
-        now.getTime() - attempt.lastAttempt.getTime() > 60 * 60 * 1000
-      ) {
-        this.failedAttempts.delete(key);
-      }
+    if (lockout.lockedUntil <= now) {
+      // Lockout expired, clean up
+      await this.prisma.accountLockout.delete({
+        where: { identifier },
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Cleanup expired lockout records
+   * Uses database queries for efficient bulk deletion of expired entries
+   */
+  private async cleanup(): Promise<void> {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    // Delete expired lockouts and old records without recent attempts
+    await this.prisma.accountLockout.deleteMany({
+      where: {
+        OR: [
+          // Expired lockouts
+          {
+            lockedUntil: {
+              not: null,
+              lte: now,
+            },
+          },
+          // Old records without lockouts and no recent attempts
+          {
+            lockedUntil: null,
+            lastAttempt: {
+              lt: oneHourAgo,
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  /**
+   * Cleanup on service destruction
+   */
+  onModuleDestroy(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
     }
   }
 }

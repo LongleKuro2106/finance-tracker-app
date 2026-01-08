@@ -143,26 +143,27 @@ export async function cleanupTestData(prisma: PrismaService): Promise<void> {
 }
 
 /**
- * Default password for test users.
- * This is intentionally simple and only used in test environments.
- * GitGuardian warning can be ignored - this is not a production secret.
- * Can be overridden via TEST_USER_PASSWORD environment variable.
- */
-const DEFAULT_TEST_USER_PASSWORD =
-  process.env.TEST_USER_PASSWORD || 'TEST_ONLY_PASSWORD_Test123!@#';
-
-/**
  * Generates a unique test username/email with a test password.
- * The password is intentionally simple for testing purposes and is NOT a production secret.
+ * SECURITY: Test password MUST be provided via TEST_USER_PASSWORD environment variable.
+ * Hard-coded passwords are not allowed for security compliance.
  * Used only in isolated test environments with ephemeral test data.
  */
 export function generateTestUser(prefix = 'test'): TestUser {
+  // SECURITY: Require TEST_USER_PASSWORD environment variable - no hard-coded fallback
+  const testPassword = process.env.TEST_USER_PASSWORD;
+  if (!testPassword || testPassword.trim().length === 0) {
+    throw new Error(
+      'TEST_USER_PASSWORD environment variable is required for test execution. ' +
+        'Please set it in your test environment configuration.',
+    );
+  }
+
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000);
   return {
     username: `${prefix}_user_${timestamp}_${random}`,
     email: `${prefix}_${timestamp}_${random}@test.com`,
-    password: DEFAULT_TEST_USER_PASSWORD,
+    password: testPassword,
   };
 }
 

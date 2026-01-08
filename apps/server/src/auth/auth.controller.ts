@@ -21,8 +21,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import * as authenticatedUserInterface from '../common/types/authenticated-user.interface';
 import type { Request } from 'express';
-
-const isProduction = process.env.NODE_ENV === 'production';
+import { RATE_LIMITS } from '../common/config/rate-limit.config';
 
 @Controller('v1/users')
 export class AuthController {
@@ -30,12 +29,7 @@ export class AuthController {
 
   @Post('signup')
   @UseGuards(DevThrottlerGuard)
-  @Throttle({
-    default: {
-      limit: isProduction ? 5 : Number.MAX_SAFE_INTEGER,
-      ttl: 60_000,
-    },
-  })
+  @Throttle(RATE_LIMITS.auth)
   signup(@Body(ValidationPipe) body: SignupDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -44,12 +38,7 @@ export class AuthController {
 
   @Post('login')
   @UseGuards(DevThrottlerGuard)
-  @Throttle({
-    default: {
-      limit: isProduction ? 5 : Number.MAX_SAFE_INTEGER,
-      ttl: 60_000,
-    },
-  }) // IP-based rate limiting (disabled in dev)
+  @Throttle(RATE_LIMITS.auth)
   login(@Body(ValidationPipe) body: LoginDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -58,12 +47,7 @@ export class AuthController {
 
   @Post('refresh')
   @UseGuards(DevThrottlerGuard)
-  @Throttle({
-    default: {
-      limit: isProduction ? 10 : Number.MAX_SAFE_INTEGER,
-      ttl: 60_000,
-    },
-  })
+  @Throttle(RATE_LIMITS.refresh)
   refresh(@Body(ValidationPipe) body: RefreshTokenDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];

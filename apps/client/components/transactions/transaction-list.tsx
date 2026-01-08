@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense, useRef
 import type { Transaction } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { formatCategoryDisplayParts } from '@/lib/category-utils'
+import { escapeHtml } from '@/lib/utils'
 import DeleteConfirmationDialog from './delete-confirmation-dialog'
 import { useTransactions } from '@/hooks/use-transactions'
 
@@ -76,18 +77,18 @@ const TransactionItem = memo(
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
                 {categoryDisplay.child ? (
                   <>
-                    <span className="font-semibold">{categoryDisplay.parent}</span>
-                    <span>: {categoryDisplay.child}</span>
+                    <span className="font-semibold">{escapeHtml(categoryDisplay.parent)}</span>
+                    <span>: {escapeHtml(categoryDisplay.child)}</span>
                   </>
                 ) : (
-                  <span className="font-semibold">{categoryDisplay.parent}</span>
+                  <span className="font-semibold">{escapeHtml(categoryDisplay.parent)}</span>
                 )}
               </span>
             )}
           </div>
           {transaction.description && (
             <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-1">
-              {transaction.description}
+              {escapeHtml(transaction.description)}
             </p>
           )}
           <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">

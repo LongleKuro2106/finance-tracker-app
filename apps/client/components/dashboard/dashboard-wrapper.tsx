@@ -4,6 +4,7 @@ import { useState, useCallback, memo, useRef, useEffect } from 'react'
 import { DashboardTopbar } from './dashboard-topbar'
 import AnalyticsPlaceholder from './analytics-placeholder'
 import TransactionsSection from '@/components/transactions/transactions-section'
+import { escapeHtml } from '@/lib/utils'
 
 interface DashboardWrapperProps {
   username: string
@@ -43,7 +44,7 @@ const DashboardWrapper = memo(({ username }: DashboardWrapperProps) => {
             <div className="mb-6">
               <h1 className="text-3xl font-bold">Dashboard</h1>
               <p className="text-muted-foreground mt-1">
-                Welcome back, {username}
+                Welcome back, {escapeHtml(username)}
               </p>
             </div>
 

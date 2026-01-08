@@ -7,6 +7,7 @@ interface UseApiOptions {
   enabled?: boolean
   refetchInterval?: number
   staleTime?: number // Time in ms before data is considered stale
+  cache?: 'public' | 'none' // Default none to avoid cross-user leakage
 }
 
 interface UseApiResult<T> {
@@ -31,7 +32,12 @@ export function useApi<T>(
   url: string | null,
   options: UseApiOptions = {},
 ): UseApiResult<T> {
-  const { enabled = true, refetchInterval, staleTime = 30000 } = options // Default 30s cache
+  const {
+    enabled = true,
+    refetchInterval,
+    staleTime = 30000,
+    cache = 'none',
+  } = options // Default: no shared cache to avoid cross-user leakage
   const lastFetchRef = useRef<number>(0)
   const previousUrlRef = useRef<string | null>(null)
   const DEBOUNCE_MS = 500 // Prevent rapid successive calls
@@ -68,7 +74,7 @@ export function useApi<T>(
     const cacheKey = getCacheKey(url)
 
     // Check cache first (skip for explicit refetch)
-    if (!skipCache) {
+    if (cache === 'public' && !skipCache) {
       const cached = apiCache.get(cacheKey)
       if (cached && !isStale(cached)) {
         setData(cached.data as T)
@@ -89,12 +95,14 @@ export function useApi<T>(
         setData(result)
         setError(null)
 
-        // Cache the result
-        apiCache.set(cacheKey, {
-          data: result,
-          timestamp: Date.now(),
-          staleTime,
-        })
+        // Cache the result (public only)
+        if (cache === 'public') {
+          apiCache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now(),
+            staleTime,
+          })
+        }
       }
     } catch (err) {
       if (!abortControllerRef.current.signal.aborted) {

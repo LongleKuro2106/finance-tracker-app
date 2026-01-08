@@ -7,18 +7,21 @@ import { hash } from 'bcrypt';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * SECURITY: This method is intentionally disabled to prevent user enumeration attacks.
+   * The findAll() method was removed from the controller to prevent unauthorized access
+   * to user lists. If admin functionality is needed, implement role-based access control
+   * and add proper authentication/authorization guards.
+   *
+   * @deprecated This method should not be used. It's kept for potential future admin use
+   * with proper authorization guards. Regular users should use /v1/users/me endpoints.
+   */
   async findAll() {
-    const users = await this.prisma.user.findMany({
-      orderBy: { id: 'asc' },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return users;
+    // SECURITY: Throw error to prevent accidental use without proper authorization
+    // This method should only be accessible via admin endpoints with proper guards
+    throw new Error(
+      'findAll() is disabled for security. Use /v1/users/me endpoints instead.',
+    );
   }
 
   async findOne(id: string) {

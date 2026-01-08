@@ -1,12 +1,14 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 // Conditionally apply CSP directives based on environment
 const isProduction = process.env.NODE_ENV === 'production';
 
-// In production, use strict CSP without unsafe directives
+// In production, allow unsafe-inline for Next.js inline scripts (required for hydration)
+// Note: 'unsafe-inline' is a security trade-off but necessary for Next.js App Router
+// TODO: Migrate to nonce-based CSP for better security (Next.js 13+ supports nonces via middleware)
 // In development, allow unsafe directives for Next.js dev mode and Tailwind
 const scriptSrc = isProduction
-  ? "script-src 'self'"
+  ? "script-src 'self' 'unsafe-inline'"
   : "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
 
 const styleSrc = isProduction
@@ -15,46 +17,48 @@ const styleSrc = isProduction
 
 const securityHeaders = [
   {
-    key: "Content-Security-Policy",
+    key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
       scriptSrc,
       styleSrc,
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}`, // Allow API calls to backend only
+      `connect-src 'self' ${
+        process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+      }`, // Allow API calls to backend only
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-    ].join("; "),
+    ].join('; '),
   },
   {
-    key: "X-DNS-Prefetch-Control",
-    value: "on",
+    key: 'X-DNS-Prefetch-Control',
+    value: 'on',
   },
   {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
   },
   {
-    key: "X-Frame-Options",
-    value: "DENY",
+    key: 'X-Frame-Options',
+    value: 'DENY',
   },
   {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
   },
   {
-    key: "X-XSS-Protection",
-    value: "1; mode=block",
+    key: 'X-XSS-Protection',
+    value: '1; mode=block',
   },
   {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
   },
   {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=()',
   },
 ];
 
@@ -70,13 +74,21 @@ const nextConfig: NextConfig = {
   },
   // Compiler optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? {
+            exclude: ['error', 'warn'],
+          }
+        : false,
   },
   // Performance optimizations
   experimental: {
-    optimizePackageImports: ['recharts', 'lucide-react', '@radix-ui/react-slot', '@radix-ui/react-label'],
+    optimizePackageImports: [
+      'recharts',
+      'lucide-react',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-label',
+    ],
   },
   // Compression
   compress: true,
@@ -85,21 +97,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: '/:path*',
         headers: [
           ...securityHeaders,
           {
-            key: "Cache-Control",
-            value: "public, max-age=3600, must-revalidate",
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, must-revalidate',
           },
         ],
       },
       {
-        source: "/api/:path*",
+        source: '/api/:path*',
         headers: [
           {
-            key: "Cache-Control",
-            value: "no-store, no-cache, must-revalidate",
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
           },
         ],
       },

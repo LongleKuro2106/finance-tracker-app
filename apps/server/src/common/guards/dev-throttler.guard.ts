@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request } from 'express';
 
@@ -6,10 +6,30 @@ import { Request } from 'express';
  * User-based throttler guard: uses userId from JWT for rate limiting instead of IP address.
  * This ensures each authenticated user has their own rate limit bucket.
  * Falls back to IP-based limiting for unauthenticated requests.
- * Disables throttling in development mode for easier testing.
+ * Uses explicit ENABLE_RATE_LIMITING flag for better security control.
  */
 @Injectable()
 export class DevThrottlerGuard extends ThrottlerGuard {
+  private readonly logger = new Logger(DevThrottlerGuard.name);
+  private readonly isRateLimitingEnabled: boolean;
+
+  constructor(...args: ConstructorParameters<typeof ThrottlerGuard>) {
+    super(...args);
+    // SECURITY: Use explicit environment variable instead of relying on NODE_ENV
+    // This prevents accidental disabling of rate limiting in production
+    const enableRateLimiting = process.env.ENABLE_RATE_LIMITING;
+    this.isRateLimitingEnabled =
+      enableRateLimiting === 'true' ||
+      (enableRateLimiting === undefined &&
+        process.env.NODE_ENV === 'production');
+
+    if (!this.isRateLimitingEnabled) {
+      this.logger.warn(
+        'Rate limiting is DISABLED. Set ENABLE_RATE_LIMITING=true to enable.',
+      );
+    }
+  }
+
   /**
    * Generate a unique key for rate limiting based on user ID or IP address.
    * Authenticated users are tracked by userId, unauthenticated requests by IP.
@@ -28,12 +48,12 @@ export class DevThrottlerGuard extends ThrottlerGuard {
   }
 
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
-    // Skip throttling in development mode
-    if (process.env.NODE_ENV !== 'production') {
+    // Skip throttling if explicitly disabled via environment variable
+    if (!this.isRateLimitingEnabled) {
       return true;
     }
 
-    // All endpoints should be rate limited in production
+    // All endpoints should be rate limited when enabled
     return super.shouldSkip(context);
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { apiPost } from '@/lib/api-client'
+import { apiPost, clearCache } from '@/lib/api-client'
 
 interface SignOutButtonProps {
   iconOnly?: boolean
@@ -16,6 +16,8 @@ const SignOutButton = ({ iconOnly = false }: SignOutButtonProps) => {
     setLoading(true)
     try {
       await apiPost('/api/auth/logout', {})
+      // SECURITY: Clear cache on logout to prevent data leakage
+      clearCache()
       router.replace('/login')
       router.refresh()
     } finally {

@@ -20,19 +20,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwtSecret: string = (() => {
       const secret = process.env.JWT_SECRET;
       if (!secret) {
-          throw new Error(
+        throw new Error(
           'JWT_SECRET environment variable is required. Please set it in your .env file.',
-          );
+        );
       }
       return secret;
     })();
 
+    // SECURITY: Explicitly specify algorithm to prevent algorithm confusion attacks
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     super({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       jwtFromRequest,
       ignoreExpiration: false,
       secretOrKey: jwtSecret,
+      algorithms: ['HS256'], // Explicitly specify HS256 to prevent algorithm confusion
     });
   }
 

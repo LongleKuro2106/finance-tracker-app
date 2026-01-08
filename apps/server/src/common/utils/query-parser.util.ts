@@ -77,7 +77,9 @@ export interface QueryOptions {
  * Parse pagination from query string
  * ?page=1&size=20
  */
-function parsePagination(query: Record<string, string | undefined>): PaginationOptions | undefined {
+function parsePagination(
+  query: Record<string, string | undefined>,
+): PaginationOptions | undefined {
   const page = query.page ? parseInt(query.page, 10) : undefined;
   const size = query.size ? parseInt(query.size, 10) : undefined;
 
@@ -100,7 +102,9 @@ function parsePagination(query: Record<string, string | undefined>): PaginationO
  * ?sort=name:asc,date:desc
  * Validates field names against allowed fields list
  */
-function parseSort(query: Record<string, string | undefined>): SortOption[] | undefined {
+function parseSort(
+  query: Record<string, string | undefined>,
+): SortOption[] | undefined {
   const sortStr = query.sort;
   if (!sortStr) {
     return undefined;
@@ -126,10 +130,27 @@ function parseSort(query: Record<string, string | undefined>): SortOption[] | un
 }
 
 /**
+ * Maximum allowed items in 'in' operator array
+ * SECURITY: Reduced from 100 to 50 to prevent expensive database queries
+ * Prevents DoS attacks through large array inputs
+ */
+const MAX_IN_OPERATOR_ITEMS = 50;
+
+/**
+ * Maximum allowed length for 'match' operator search string
+ * Prevents DoS attacks through expensive LIKE queries
+ */
+const MAX_MATCH_OPERATOR_LENGTH = 500;
+
+/**
  * Parse filter operator and value
  * Examples: "gt:100", "eq:income", "match:Groceries", "in:cat1,cat2,cat3"
+ * Includes validation limits to prevent DoS attacks
  */
-function parseFilterValue(value: string): { operator: FilterOption['operator']; value: string | number | boolean | string[] } {
+function parseFilterValue(value: string): {
+  operator: FilterOption['operator'];
+  value: string | number | boolean | string[];
+} {
   // Check for operator prefix
   const operatorMatch = value.match(/^(eq|ne|gt|gte|lt|lte|match|in):(.+)$/);
 
@@ -137,11 +158,26 @@ function parseFilterValue(value: string): { operator: FilterOption['operator']; 
     const [, operator, val] = operatorMatch;
 
     if (operator === 'in') {
-      // Comma-separated list
+      // Validate array size to prevent DoS attacks
+      const values = val.split(',').map((v) => v.trim());
+      if (values.length > MAX_IN_OPERATOR_ITEMS) {
+        throw new BadRequestException(
+          `Too many values in "in" operator. Maximum ${MAX_IN_OPERATOR_ITEMS} items allowed.`,
+        );
+      }
       return {
         operator: 'in',
-        value: val.split(',').map((v) => v.trim()),
+        value: values,
       };
+    }
+
+    // Validate 'match' operator string length to prevent DoS attacks
+    if (operator === 'match') {
+      if (val.length > MAX_MATCH_OPERATOR_LENGTH) {
+        throw new BadRequestException(
+          `Search string too long. Maximum ${MAX_MATCH_OPERATOR_LENGTH} characters allowed for "match" operator.`,
+        );
+      }
     }
 
     // Try to parse as number or boolean
@@ -176,10 +212,27 @@ function parseFilterValue(value: string): { operator: FilterOption['operator']; 
 }
 
 /**
+ * Maximum number of filter operators allowed per query
+ * SECURITY: Reduced to 5 to prevent DoS attacks via complex queries
+ * Lower limit provides better protection against expensive database queries
+ */
+const MAX_FILTER_OPERATORS = 5;
+
+/**
+ * Maximum total query string length in characters
+ * SECURITY: Prevents DoS attacks via extremely long query strings
+ */
+const MAX_QUERY_STRING_LENGTH = 2048;
+
+/**
  * Parse filters from query string
  * ?amount=gt:100&type=eq:income&category=match:Groceries
+ * SECURITY: Limits total number of filters to prevent DoS attacks
  */
-function parseFilters(query: Record<string, string | undefined>, allowedFields: string[]): FilterOption[] | undefined {
+function parseFilters(
+  query: Record<string, string | undefined>,
+  allowedFields: string[],
+): FilterOption[] | undefined {
   const filters: FilterOption[] = [];
 
   for (const [key, value] of Object.entries(query)) {
@@ -191,6 +244,13 @@ function parseFilters(query: Record<string, string | undefined>, allowedFields: 
     // Only allow filtering on specified fields (security)
     if (!allowedFields.includes(key)) {
       continue;
+    }
+
+    // SECURITY: Limit total number of filters to prevent DoS
+    if (filters.length >= MAX_FILTER_OPERATORS) {
+      throw new BadRequestException(
+        `Too many filter operators. Maximum ${MAX_FILTER_OPERATORS} filters allowed per query.`,
+      );
     }
 
     if (value !== undefined) {
@@ -210,7 +270,9 @@ function parseFilters(query: Record<string, string | undefined>, allowedFields: 
  * Parse cursor-based pagination (backward compatibility)
  * ?cursor=uuid&limit=20
  */
-function parseCursorPagination(query: Record<string, string | undefined>): { cursor?: string; limit?: number } | undefined {
+function parseCursorPagination(
+  query: Record<string, string | undefined>,
+): { cursor?: string; limit?: number } | undefined {
   const cursor = query.cursor;
   const limit = query.limit ? parseInt(query.limit, 10) : undefined;
 
@@ -235,6 +297,17 @@ export function parseQuery(
   query: Record<string, string | undefined>,
   allowedFields: string[] = [],
 ): QueryOptions {
+  // SECURITY: Validate total query string length to prevent DoS attacks
+  const queryString = Object.entries(query)
+    .map(([key, value]) => `${key}=${value ?? ''}`)
+    .join('&');
+
+  if (queryString.length > MAX_QUERY_STRING_LENGTH) {
+    throw new BadRequestException(
+      `Query string too long. Maximum ${MAX_QUERY_STRING_LENGTH} characters allowed.`,
+    );
+  }
+
   const options: QueryOptions = {};
 
   // Parse pagination (page-based)
@@ -332,4 +405,3 @@ export function sortToPrismaOrderBy(
 
   return sort.map((s) => ({ [s.field]: s.direction }));
 }
-

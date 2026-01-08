@@ -16,9 +16,8 @@ export class CategoriesService {
     });
 
     if (!category) {
-      throw new NotFoundException(
-        `Category "${categoryName}" not found. Please use a valid category name.`,
-      );
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     return category;

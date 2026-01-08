@@ -30,22 +30,31 @@ async function createApp(): Promise<express.Application> {
   app.set('trust proxy', 1);
 
   // CORS origin whitelist configuration
-  // Parses ALLOWED_ORIGINS environment variable or defaults to localhost in development
+  // SECURITY: No hard-coded defaults - requires explicit configuration in all environments
+  // This prevents CORS misconfiguration if NODE_ENV check fails
   const allowedOrigins = (() => {
     const origins = process.env.ALLOWED_ORIGINS;
     if (!origins) {
+      // SECURITY: Require explicit configuration in all environments
+      // No fallback defaults to prevent accidental exposure
       if (process.env.NODE_ENV === 'production') {
         throw new Error(
           'ALLOWED_ORIGINS environment variable is required in production',
         );
       }
-      return ['http://localhost:3000']; // Development default: localhost only
+      // SECURITY: Development mode also requires explicit configuration
+      // This prevents accidental misconfiguration
+      throw new Error(
+        'ALLOWED_ORIGINS environment variable is required. ' +
+          'Please set it in your .env file (e.g., ALLOWED_ORIGINS=http://localhost:3000)',
+      );
     }
     // Normalize origin strings: trim whitespace and remove trailing slashes
     // CORS origin matching requires exact string equality per RFC 6454
     return origins
       .split(',')
-      .map((origin) => origin.trim().replace(/\/+$/, ''));
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+      .filter((origin) => origin.length > 0); // SECURITY: Filter out empty strings
   })();
 
   // Shared secret for authenticating server-to-server requests

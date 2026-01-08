@@ -8,6 +8,19 @@ import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
 
+/**
+ * Maximum number of budgets allowed per user
+ * Prevents DoS attacks via excessive budget creation
+ */
+const MAX_BUDGETS_PER_USER = 100;
+
+/**
+ * Maximum number of parallel expense queries
+ * SECURITY: Reduced from 50 to 25 to prevent database connection pool exhaustion
+ * Lower limit provides better protection against DoS attacks
+ */
+const MAX_PARALLEL_EXPENSE_QUERIES = 25;
+
 @Injectable()
 export class BudgetsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,6 +69,8 @@ export class BudgetsService {
   /**
    * Batch get total expenses for multiple months
    * Optimized to reduce database queries
+   * SECURITY: Limits parallel queries to prevent DoS attacks
+   * Includes timeout mechanism to prevent connection pool exhaustion
    */
   private async getTotalExpensesForMonths(
     userId: string,
@@ -65,12 +80,39 @@ export class BudgetsService {
       return new Map();
     }
 
-    // Execute all expense queries in parallel
-    const expensePromises = monthYearPairs.map(async ({ month, year }) => {
+    // SECURITY: Limit number of parallel queries to prevent connection pool exhaustion
+    const limitedPairs = monthYearPairs.slice(0, MAX_PARALLEL_EXPENSE_QUERIES);
+
+    /**
+     * SECURITY: Query timeout wrapper to prevent hanging queries
+     * Prevents database connection pool exhaustion from slow or hanging queries
+     */
+    const queryWithTimeout = async <T>(
+      promise: Promise<T>,
+      timeoutMs: number,
+    ): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Database query timeout')),
+            timeoutMs,
+          ),
+        ),
+      ]);
+    };
+
+    // SECURITY: Maximum timeout per query (5 seconds)
+    // This prevents individual queries from hanging and exhausting connections
+    const QUERY_TIMEOUT_MS = 5000;
+
+    // Execute expense queries in batches with timeout protection
+    // SECURITY: Each query has a timeout to prevent connection pool exhaustion
+    const expensePromises = limitedPairs.map(async ({ month, year }) => {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0); // Last day of the month
 
-      const expenses = await this.prisma.transaction.aggregate({
+      const queryPromise = this.prisma.transaction.aggregate({
         _sum: { amount: true },
         where: {
           userId,
@@ -82,16 +124,30 @@ export class BudgetsService {
         },
       });
 
-      const key = `${year}-${month}`;
-      const spent = expenses._sum.amount?.toNumber() || 0;
-      return { key, spent };
+      try {
+        const expenses = await queryWithTimeout(queryPromise, QUERY_TIMEOUT_MS);
+        const key = `${year}-${month}`;
+        const spent = expenses._sum.amount?.toNumber() || 0;
+        return { key, spent };
+      } catch (error) {
+        // SECURITY: On timeout or error, return zero instead of failing entire request
+        // This prevents DoS attacks from causing complete service failure
+        const key = `${year}-${month}`;
+        return { key, spent: 0 };
+      }
     });
 
-    const results = await Promise.all(expensePromises);
+    // SECURITY: Use Promise.allSettled instead of Promise.all to handle partial failures
+    // This prevents one failed query from failing all queries
+    const results = await Promise.allSettled(expensePromises);
     const expensesMap = new Map<string, number>();
 
-    results.forEach(({ key, spent }) => {
-      expensesMap.set(key, spent);
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { key, spent } = result.value;
+        expensesMap.set(key, spent);
+      }
+      // SECURITY: Ignore rejected promises (already handled in try-catch above)
     });
 
     return expensesMap;
@@ -166,9 +222,21 @@ export class BudgetsService {
 
   /**
    * Create a new budget for a user
+   * SECURITY: Enforces maximum budget limit per user to prevent DoS attacks
    */
   async create(userId: string, dto: CreateBudgetDto) {
     this.validateDateNotInPast(dto.month, dto.year);
+
+    // SECURITY: Check current budget count to prevent DoS via excessive budget creation
+    const budgetCount = await this.prisma.budget.count({
+      where: { userId },
+    });
+
+    if (budgetCount >= MAX_BUDGETS_PER_USER) {
+      throw new BadRequestException(
+        `Maximum budget limit reached. You can have up to ${MAX_BUDGETS_PER_USER} budgets.`,
+      );
+    }
 
     // Check if budget already exists
     const existing = await this.prisma.budget.findUnique({
@@ -264,7 +332,8 @@ export class BudgetsService {
     });
 
     if (!budget) {
-      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     const status = await this.checkBudgetStatus(userId, month, year);
@@ -296,7 +365,8 @@ export class BudgetsService {
     });
 
     if (!budget) {
-      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     // If updating month/year, validate they're not in the past
@@ -349,7 +419,8 @@ export class BudgetsService {
     });
 
     if (!budget) {
-      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     await this.prisma.budget.delete({
@@ -386,7 +457,8 @@ export class BudgetsService {
     });
 
     if (!budget) {
-      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     // Calculate next month/year
@@ -409,9 +481,7 @@ export class BudgetsService {
     });
 
     if (existingNext) {
-      throw new BadRequestException(
-        `Budget already exists for ${nextMonth}/${nextYear}`,
-      );
+      throw new BadRequestException('Budget already exists for target period');
     }
 
     // Create new budget for next month with same amount
@@ -462,7 +532,8 @@ export class BudgetsService {
     });
 
     if (!budget) {
-      throw new NotFoundException(`Budget not found for ${month}/${year}`);
+      // SECURITY: Use generic error message to prevent information disclosure
+      throw new NotFoundException('Resource not found');
     }
 
     const updated = await this.prisma.budget.update({

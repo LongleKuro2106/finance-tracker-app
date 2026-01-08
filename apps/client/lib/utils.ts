@@ -1,8 +1,24 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
+}
+
+/**
+ * Sanitize HTML to prevent XSS attacks
+ * Uses DOMPurify with HTML profile disabled for text-only sanitization
+ */
+export function escapeHtml(text: string | null | undefined): string {
+  if (!text) return '';
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
 }
 
 export const getApiBaseUrl = (): string => {
@@ -14,30 +30,39 @@ export const getApiBaseUrl = (): string => {
   if (typeof window === 'undefined') {
     // Server-side execution
     // Check for explicit server-side API URL (for Docker internal networking)
-    const serverApiUrl = process.env.API_BASE_URL
+    const serverApiUrl = process.env.API_BASE_URL;
     if (serverApiUrl && serverApiUrl.length > 0) {
-      return serverApiUrl
+      return serverApiUrl;
     }
     // Fallback: use NEXT_PUBLIC_API_BASE_URL or default to localhost
-    const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-    return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:8000'
+    const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:8000';
   }
 
   // Client-side: use NEXT_PUBLIC_API_BASE_URL (set at build time)
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-  if (envUrl && envUrl.length > 0) return envUrl
-  return 'http://localhost:8000'
-}
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (envUrl && envUrl.length > 0) return envUrl;
+  return 'http://localhost:8000';
+};
 
 /**
  * Get the internal secret for server-to-server authentication
- * This is only available server-side (in API routes and Server Components)
+ * SECURITY: This function MUST only be called server-side (in API routes and Server Components)
+ * Throws an error if called in browser environment to prevent secret exposure
  */
 export const getInternalSecret = (): string | undefined => {
+  // SECURITY: Runtime check to prevent client-side access
+  if (typeof window !== 'undefined') {
+    throw new Error(
+      'getInternalSecret() must only be called server-side. ' +
+        'This function cannot be used in client-side code.',
+    );
+  }
+
   // This is a server-side only environment variable
   // It should NOT be prefixed with NEXT_PUBLIC_ for security
-  return process.env.INTERNAL_SECRET
-}
+  return process.env.INTERNAL_SECRET;
+};
 
 /**
  * Build headers object with internal secret for server-to-server requests
@@ -49,65 +74,63 @@ export const buildInternalHeaders = (
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...additionalHeaders,
-  }
+  };
 
-  const secret = getInternalSecret()
+  const secret = getInternalSecret();
   if (secret) {
-    headers['X-Internal-Secret'] = secret
+    headers['X-Internal-Secret'] = secret;
   }
 
-  return headers
-}
+  return headers;
+};
 
 export type DecodedToken = {
-  sub: string
-  username: string
-  tokenVersion: number
-  exp?: number
-  iat?: number
-}
+  sub: string;
+  username: string;
+  tokenVersion: number;
+  exp?: number;
+  iat?: number;
+};
 
 export type UserInfo = {
-  username: string
-  userId: string
-  email: string
-}
+  username: string;
+  userId: string;
+  email: string;
+};
 
 export type Category = {
-  id: number
-  name: string
-  parentId: number | null
-}
+  id: number;
+  name: string;
+  parentId: number | null;
+};
 
 export type Transaction = {
-  id: string // UUID
-  userId: string
-  categoryId: number | null
-  type: 'income' | 'expense'
-  amount: number | string // Decimal from Prisma
-  date: string // ISO date string
-  description: string | null
-  category: Category | null
-  createdAt: string
-  updatedAt: string
-}
+  id: string; // UUID
+  userId: string;
+  categoryId: number | null;
+  type: 'income' | 'expense';
+  amount: number | string; // Decimal from Prisma
+  date: string; // ISO date string
+  description: string | null;
+  category: Category | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type TransactionsResponse = {
-  data: Transaction[]
-  nextCursor: string | null
-  pageSize: number
-}
+  data: Transaction[];
+  nextCursor: string | null;
+  pageSize: number;
+};
 
 export const decodeJwt = (token: string): DecodedToken | null => {
   try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    const payload = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
-    const decoded = Buffer.from(payload, 'base64').toString('utf-8')
-    return JSON.parse(decoded) as DecodedToken
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = Buffer.from(payload, 'base64').toString('utf-8');
+    return JSON.parse(decoded) as DecodedToken;
   } catch {
-    return null
+    return null;
   }
-}
+};

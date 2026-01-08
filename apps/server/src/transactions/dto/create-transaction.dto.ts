@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -25,10 +26,22 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: 'Category name cannot exceed 100 characters' })
+  @Transform(({ value }) => {
+    // SECURITY: Sanitize category name to prevent XSS and injection attacks
+    if (typeof value === 'string' && value) {
+      return sanitizeHtml(value.trim(), {
+        allowedTags: [],
+        allowedAttributes: {},
+      });
+    }
+    return value;
+  })
   categoryName?: string; // Category name (e.g., "Groceries", "Restaurants")
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000, { message: 'Description cannot exceed 1000 characters' })
   @Transform(({ value }) => {
     if (typeof value === 'string' && value) {
       return sanitizeHtml(value, {

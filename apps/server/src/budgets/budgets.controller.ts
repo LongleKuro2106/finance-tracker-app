@@ -11,14 +11,18 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { DevThrottlerGuard } from '../common/guards/dev-throttler.guard';
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
 import { BudgetMonthYearQueryDto } from './dto/budget-query.dto';
+import { RATE_LIMITS } from '../common/config/rate-limit.config';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, DevThrottlerGuard)
+@Throttle(RATE_LIMITS.budgets)
 @Controller('v1/budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}

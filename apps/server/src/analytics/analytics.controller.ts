@@ -15,20 +15,10 @@ import {
   CategoriesQueryDto,
   DailySpendingQueryDto,
 } from './dto/analytics-query.dto';
+import { RATE_LIMITS } from '../common/config/rate-limit.config';
 
-// Use DevThrottlerGuard which disables throttling in development
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
-@Throttle({
-  default: {
-    limit: process.env.NODE_ENV === 'production' ? 30 : Number.MAX_SAFE_INTEGER,
-    ttl: 60_000, // 1 minute
-  },
-  long: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
-    ttl: 3_600_000, // 1 hour
-  },
-}) // Stricter rate limits: 30 requests per minute, 1000 requests per hour in production
+@Throttle(RATE_LIMITS.analytics)
 @Controller('v1/analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
