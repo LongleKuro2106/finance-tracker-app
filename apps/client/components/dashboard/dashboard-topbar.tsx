@@ -1,17 +1,20 @@
-'use client'
+'use client';
 
-import { useCallback, memo } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { ThemeToggle } from '@/components/shared/theme-toggle'
-import SignOutButton from '@/components/auth/signout'
+import { useCallback, memo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
+import SignOutButton from '@/components/auth/signout';
 
 export const DashboardTopbar = memo(function DashboardTopbar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
-  const isActive = useCallback((path: string) => {
-    return pathname === path
-  }, [pathname])
+  const isActive = useCallback(
+    (path: string) => {
+      return pathname === path;
+    },
+    [pathname],
+  );
 
   return (
     <nav className="neomorphic-sidebar border-enhanced fixed top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-2 sm:px-4 md:px-6">
@@ -21,8 +24,7 @@ export const DashboardTopbar = memo(function DashboardTopbar() {
         prefetch={true}
         className="flex items-center gap-2 text-base sm:text-lg font-bold text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
       >
-        <span className="text-lg sm:text-xl">F</span>
-        <span className="hidden sm:inline">Finance Tracker</span>
+        <span>Finance Tracker</span>
       </Link>
 
       {/* Navigation Links - Centered */}
@@ -174,7 +176,6 @@ export const DashboardTopbar = memo(function DashboardTopbar() {
             Profile
           </span>
         </Link>
-
       </div>
 
       {/* Right Side Actions */}
@@ -190,5 +191,5 @@ export const DashboardTopbar = memo(function DashboardTopbar() {
         </div>
       </div>
     </nav>
-  )
-})
+  );
+});

@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -13,10 +13,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import CategorySelector from './category-selector'
-import { apiPost } from '@/lib/api-client'
-import { getOperationErrorMessage } from '@/lib/error-handler'
+} from '@/components/ui/form';
+import CategorySelector from './category-selector';
+import { apiPost } from '@/lib/api-client';
+import { getOperationErrorMessage } from '@/lib/error-handler';
 
 const transactionSchema = z.object({
   amount: z
@@ -35,15 +35,15 @@ const transactionSchema = z.object({
     .string()
     .max(500, 'Description must be less than 500 characters')
     .optional(),
-})
+});
 
-type TransactionFormValues = z.infer<typeof transactionSchema>
+type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 interface AddTransactionFormProps {
-  isOpen?: boolean
-  onClose?: () => void
-  onSuccess: () => void
-  asPage?: boolean
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSuccess: () => void;
+  asPage?: boolean;
 }
 
 const AddTransactionForm = ({
@@ -52,8 +52,8 @@ const AddTransactionForm = ({
   onSuccess,
   asPage = false,
 }: AddTransactionFormProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
@@ -64,11 +64,11 @@ const AddTransactionForm = ({
       categoryName: '',
       description: '',
     },
-  })
+  });
 
   const handleSubmit = async (values: TransactionFormValues) => {
-    setIsSubmitting(true)
-    setError(null)
+    setIsSubmitting(true);
+    setError(null);
 
     try {
       await apiPost('/api/transactions', {
@@ -77,48 +77,45 @@ const AddTransactionForm = ({
         type: values.type,
         categoryName: values.categoryName || undefined,
         description: values.description || undefined,
-      })
+      });
 
-      form.reset()
-      onSuccess()
+      form.reset();
+      onSuccess();
       if (asPage) {
-        return
+        return;
       }
       if (onClose) {
-        onClose()
+        onClose();
       }
     } catch (err) {
-      const errorMessage = getOperationErrorMessage('create', err)
-      setError(errorMessage)
+      const errorMessage = getOperationErrorMessage('create', err);
+      setError(errorMessage);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleClose = () => {
     if (!isSubmitting && onClose) {
-      form.reset()
-      setError(null)
-      onClose()
+      form.reset();
+      setError(null);
+      onClose();
     }
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape' && !isSubmitting && !asPage && onClose) {
-      handleClose()
+      handleClose();
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const formContent = (
     <>
       {!asPage && (
         <div className="flex items-center justify-between mb-4">
-          <h2
-            id="transaction-form-title"
-            className="text-xl font-semibold"
-          >
+          <h2 id="transaction-form-title" className="text-xl font-semibold">
             Add Transaction
           </h2>
           {onClose && (
@@ -148,163 +145,153 @@ const AddTransactionForm = ({
       )}
 
       {asPage && (
-        <h2
-          id="transaction-form-title"
-          className="text-xl font-semibold mb-4"
-        >
+        <h2 id="transaction-form-title" className="text-xl font-semibold mb-4">
           Add Transaction
         </h2>
       )}
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
-                          disabled={isSubmitting}
-                        >
-                          <option value="expense">Expense</option>
-                          <option value="income">Income</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30"
+                        disabled={isSubmitting}
+                      >
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value) || 0
-                            field.onChange(value)
-                          }}
-                          value={field.value || ''}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          field.onChange(value);
+                        }}
+                        value={field.value || ''}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="categoryName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category (Optional)</FormLabel>
-                      <FormControl>
-                        <CategorySelector
-                          value={field.value || ''}
-                          onChange={field.onChange}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder="Add a description"
-                          {...field}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            {error && (
-              <div
-                className="text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
-                {error}
-              </div>
-            )}
+            {/* Right Column */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="categoryName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category (Optional)</FormLabel>
+                    <FormControl>
+                      <CategorySelector
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="flex gap-3 justify-end pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                aria-busy={isSubmitting}
-                className="bg-success text-success-foreground hover:opacity-90"
-              >
-                {isSubmitting ? 'Adding...' : 'Add Transaction'}
-              </Button>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Add a description"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </form>
-        </Form>
+          </div>
+
+          {error && (
+            <div
+              className="text-sm text-red-600 dark:text-red-400"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              className="bg-success text-success-foreground hover:opacity-90"
+            >
+              {isSubmitting ? 'Adding...' : 'Add Transaction'}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </>
-  )
+  );
 
   if (asPage) {
-    return formContent
+    return formContent;
   }
 
   return (
@@ -323,8 +310,7 @@ const AddTransactionForm = ({
         {formContent}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AddTransactionForm
-
+export default AddTransactionForm;

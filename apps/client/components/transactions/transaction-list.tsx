@@ -1,19 +1,27 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense, useRef } from 'react'
-import type { Transaction } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { formatCategoryDisplayParts } from '@/lib/category-utils'
-import { escapeHtml } from '@/lib/utils'
-import DeleteConfirmationDialog from './delete-confirmation-dialog'
-import { useTransactions } from '@/hooks/use-transactions'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  memo,
+  lazy,
+  Suspense,
+  useRef,
+} from 'react';
+import type { Transaction } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { formatCategoryDisplayParts } from '@/lib/category-utils';
+import DeleteConfirmationDialog from './delete-confirmation-dialog';
+import { useTransactions } from '@/hooks/use-transactions';
 
 // Lazy load form component for better code splitting
-const EditTransactionForm = lazy(() => import('./edit-transaction-form'))
+const EditTransactionForm = lazy(() => import('./edit-transaction-form'));
 
 interface TransactionListProps {
-  refreshKey?: number
-  onRefresh?: () => void
+  refreshKey?: number;
+  onRefresh?: () => void;
 }
 
 // Memoized transaction item component
@@ -23,45 +31,44 @@ const TransactionItem = memo(
     onEdit,
     onDelete,
   }: {
-    transaction: Transaction
-    onEdit: (transaction: Transaction) => void
-    onDelete: (transaction: Transaction) => void
+    transaction: Transaction;
+    onEdit: (transaction: Transaction) => void;
+    onDelete: (transaction: Transaction) => void;
   }) => {
     const formatDate = useCallback((dateString: string) => {
-      const date = new Date(dateString)
+      const date = new Date(dateString);
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-      })
-    }, [])
+      });
+    }, []);
 
     const formatAmount = useCallback((amount: number | string) => {
-      const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      const numAmount =
+        typeof amount === 'string' ? parseFloat(amount) : amount;
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-      }).format(numAmount)
-    }, [])
+      }).format(numAmount);
+    }, []);
 
     const categoryDisplay = useMemo(() => {
-      if (!transaction.category) return null
-      return formatCategoryDisplayParts(transaction.category.name)
-    }, [transaction.category])
+      if (!transaction.category) return null;
+      return formatCategoryDisplayParts(transaction.category.name);
+    }, [transaction.category]);
 
     const formattedDate = useMemo(
       () => formatDate(transaction.date),
       [formatDate, transaction.date],
-    )
+    );
     const formattedAmount = useMemo(
       () => formatAmount(transaction.amount),
       [formatAmount, transaction.amount],
-    )
+    );
 
     return (
-      <div
-        className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-      >
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <div
@@ -77,18 +84,22 @@ const TransactionItem = memo(
               <span className="text-sm text-neutral-600 dark:text-neutral-400">
                 {categoryDisplay.child ? (
                   <>
-                    <span className="font-semibold">{escapeHtml(categoryDisplay.parent)}</span>
-                    <span>: {escapeHtml(categoryDisplay.child)}</span>
+                    <span className="font-semibold">
+                      {categoryDisplay.parent}
+                    </span>
+                    <span>: {categoryDisplay.child}</span>
                   </>
                 ) : (
-                  <span className="font-semibold">{escapeHtml(categoryDisplay.parent)}</span>
+                  <span className="font-semibold">
+                    {categoryDisplay.parent}
+                  </span>
                 )}
               </span>
             )}
           </div>
           {transaction.description && (
             <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-1">
-              {escapeHtml(transaction.description)}
+              {transaction.description}
             </p>
           )}
           <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
@@ -154,155 +165,166 @@ const TransactionItem = memo(
           </div>
         </div>
       </div>
-    )
+    );
   },
-)
+);
 
-TransactionItem.displayName = 'TransactionItem'
+TransactionItem.displayName = 'TransactionItem';
 
-const TransactionList = memo(({ refreshKey, onRefresh }: TransactionListProps) => {
-  const {
-    transactions,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refetch,
-    deleteTransaction,
-  } = useTransactions()
+const TransactionList = memo(
+  ({ refreshKey, onRefresh }: TransactionListProps) => {
+    const {
+      transactions,
+      loading,
+      error,
+      hasMore,
+      loadMore,
+      refetch,
+      deleteTransaction,
+    } = useTransactions();
 
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+    const [editingTransaction, setEditingTransaction] =
+      useState<Transaction | null>(null);
+    const [deletingTransaction, setDeletingTransaction] =
+      useState<Transaction | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-  // Track previous refresh key to prevent unnecessary refetches
-  const prevRefreshKeyRef = useRef<number | undefined>(undefined)
+    // Track previous refresh key to prevent unnecessary refetches
+    const prevRefreshKeyRef = useRef<number | undefined>(undefined);
 
-  // Refetch when refreshKey changes (but debounce to prevent rapid refetches)
-  useEffect(() => {
-    // Only refetch if refreshKey actually changed and is > 0
-    if (refreshKey !== undefined && refreshKey > 0 && refreshKey !== prevRefreshKeyRef.current) {
-      prevRefreshKeyRef.current = refreshKey
+    // Refetch when refreshKey changes (but debounce to prevent rapid refetches)
+    useEffect(() => {
+      // Only refetch if refreshKey actually changed and is > 0
+      if (
+        refreshKey !== undefined &&
+        refreshKey > 0 &&
+        refreshKey !== prevRefreshKeyRef.current
+      ) {
+        prevRefreshKeyRef.current = refreshKey;
 
-      // Debounce to batch multiple refresh key changes
-      const timeoutId = setTimeout(() => {
-        refetch()
-      }, 200) // Increased delay to batch changes better
+        // Debounce to batch multiple refresh key changes
+        const timeoutId = setTimeout(() => {
+          refetch();
+        }, 200); // Increased delay to batch changes better
 
-      return () => clearTimeout(timeoutId)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]) // Don't include refetch in deps to avoid unnecessary re-runs
+        return () => clearTimeout(timeoutId);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [refreshKey]); // Don't include refetch in deps to avoid unnecessary re-runs
 
-  const handleEdit = useCallback((transaction: Transaction) => {
-    setEditingTransaction(transaction)
-  }, [])
+    const handleEdit = useCallback((transaction: Transaction) => {
+      setEditingTransaction(transaction);
+    }, []);
 
-  const handleDeleteClick = useCallback((transaction: Transaction) => {
-    setDeletingTransaction(transaction)
-  }, [])
+    const handleDeleteClick = useCallback((transaction: Transaction) => {
+      setDeletingTransaction(transaction);
+    }, []);
 
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!deletingTransaction) return
+    const handleDeleteConfirm = useCallback(async () => {
+      if (!deletingTransaction) return;
 
-    setIsDeleting(true)
-    try {
-      await deleteTransaction(deletingTransaction.id)
-      setDeletingTransaction(null)
-      onRefresh?.()
-    } catch {
-      // Error is handled by hook
-    } finally {
-      setIsDeleting(false)
-    }
-  }, [deletingTransaction, deleteTransaction, onRefresh])
+      setIsDeleting(true);
+      try {
+        await deleteTransaction(deletingTransaction.id);
+        setDeletingTransaction(null);
+        onRefresh?.();
+      } catch {
+        // Error is handled by hook
+      } finally {
+        setIsDeleting(false);
+      }
+    }, [deletingTransaction, deleteTransaction, onRefresh]);
 
-  const handleEditSuccess = useCallback(() => {
-    setEditingTransaction(null)
-    onRefresh?.()
-  }, [onRefresh])
+    const handleEditSuccess = useCallback(() => {
+      setEditingTransaction(null);
+      onRefresh?.();
+    }, [onRefresh]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-neutral-600 dark:text-neutral-400">Loading transactions...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-red-600 dark:text-red-400" role="alert">
-          {error}
-        </div>
-      </div>
-    )
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-neutral-600 dark:text-neutral-400">
-          No transactions found. Start by adding your first transaction!
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <div className="w-full space-y-2">
-        {transactions.map((transaction) => (
-          <TransactionItem
-            key={transaction.id}
-            transaction={transaction}
-            onEdit={handleEdit}
-            onDelete={handleDeleteClick}
-          />
-        ))}
-
-        {hasMore && (
-          <div className="flex justify-center pt-4">
-            <button
-              onClick={loadMore}
-              disabled={loading}
-              className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-busy={loading}
-            >
-              {loading ? 'Loading...' : 'Load More'}
-            </button>
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-neutral-600 dark:text-neutral-400">
+            Loading transactions...
           </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-red-600 dark:text-red-400" role="alert">
+            {error}
+          </div>
+        </div>
+      );
+    }
+
+    if (transactions.length === 0) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-neutral-600 dark:text-neutral-400">
+            No transactions found. Start by adding your first transaction!
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="w-full space-y-2">
+          {transactions.map((transaction) => (
+            <TransactionItem
+              key={transaction.id}
+              transaction={transaction}
+              onEdit={handleEdit}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="px-4 py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-busy={loading}
+              >
+                {loading ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {editingTransaction && (
+          <Suspense
+            fallback={<div className="text-center p-4">Loading form...</div>}
+          >
+            <EditTransactionForm
+              isOpen={!!editingTransaction}
+              onClose={() => setEditingTransaction(null)}
+              onSuccess={handleEditSuccess}
+              transaction={editingTransaction}
+            />
+          </Suspense>
         )}
-      </div>
 
-      {editingTransaction && (
-        <Suspense fallback={<div className="text-center p-4">Loading form...</div>}>
-          <EditTransactionForm
-            isOpen={!!editingTransaction}
-            onClose={() => setEditingTransaction(null)}
-            onSuccess={handleEditSuccess}
-            transaction={editingTransaction}
+        {deletingTransaction && (
+          <DeleteConfirmationDialog
+            isOpen={!!deletingTransaction}
+            onClose={() => setDeletingTransaction(null)}
+            onConfirm={handleDeleteConfirm}
+            transactionDescription={deletingTransaction.description}
+            amount={deletingTransaction.amount}
+            type={deletingTransaction.type}
+            isDeleting={isDeleting}
           />
-        </Suspense>
-      )}
+        )}
+      </>
+    );
+  },
+);
 
-      {deletingTransaction && (
-        <DeleteConfirmationDialog
-          isOpen={!!deletingTransaction}
-          onClose={() => setDeletingTransaction(null)}
-          onConfirm={handleDeleteConfirm}
-          transactionDescription={deletingTransaction.description}
-          amount={deletingTransaction.amount}
-          type={deletingTransaction.type}
-          isDeleting={isDeleting}
-        />
-      )}
-    </>
-  )
-})
+TransactionList.displayName = 'TransactionList';
 
-TransactionList.displayName = 'TransactionList'
-
-export default TransactionList
-
+export default TransactionList;

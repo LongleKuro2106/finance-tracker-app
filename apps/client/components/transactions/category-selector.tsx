@@ -1,19 +1,18 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { PARENT_CATEGORIES, CATEGORY_HIERARCHY } from '@/lib/category-utils'
-import { escapeHtml } from '@/lib/utils'
+import { useState, useRef, useEffect } from 'react';
+import { PARENT_CATEGORIES, CATEGORY_HIERARCHY } from '@/lib/category-utils';
 
 // Convert category hierarchy to the format needed for the selector
 const CATEGORIES = PARENT_CATEGORIES.map((parentName) => ({
   name: parentName,
   children: CATEGORY_HIERARCHY[parentName] || [],
-}))
+}));
 
 interface CategorySelectorProps {
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
 const CategorySelector = ({
@@ -21,69 +20,69 @@ const CategorySelector = ({
   onChange,
   disabled = false,
 }: CategorySelectorProps) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [submenuPosition, setSubmenuPosition] = useState<{
-    top: number
-    left: number
-  } | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    top: number;
+    left: number;
+  } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSelect = (categoryName: string) => {
-    onChange(categoryName)
-    setIsOpen(false)
-    setHoveredCategory(null)
-    setSubmenuPosition(null)
-  }
+    onChange(categoryName);
+    setIsOpen(false);
+    setHoveredCategory(null);
+    setSubmenuPosition(null);
+  };
 
   const handleCategoryMouseEnter = (
     e: React.MouseEvent<HTMLDivElement>,
     categoryName: string,
   ) => {
     if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
+      clearTimeout(hoverTimeoutRef.current);
     }
 
-    const category = CATEGORIES.find((cat) => cat.name === categoryName)
+    const category = CATEGORIES.find((cat) => cat.name === categoryName);
     if (category && category.children.length > 0) {
-      const rect = e.currentTarget.getBoundingClientRect()
-      const submenuLeft = rect.right + 8 // 8px gap between menu and submenu
-      const viewportWidth = window.innerWidth
-      const submenuWidth = 200 // Estimated submenu width
+      const rect = e.currentTarget.getBoundingClientRect();
+      const submenuLeft = rect.right + 8; // 8px gap between menu and submenu
+      const viewportWidth = window.innerWidth;
+      const submenuWidth = 200; // Estimated submenu width
 
       // Adjust position if submenu would go off-screen
-      let finalLeft = submenuLeft
+      let finalLeft = submenuLeft;
       if (submenuLeft + submenuWidth > viewportWidth - 16) {
         // Position on the left side if there's not enough space on the right
-        finalLeft = rect.left - submenuWidth - 8
+        finalLeft = rect.left - submenuWidth - 8;
       }
 
-      setHoveredCategory(categoryName)
+      setHoveredCategory(categoryName);
       setSubmenuPosition({
         top: rect.top,
         left: finalLeft,
-      })
+      });
     }
-  }
+  };
 
   const handleCategoryMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
-      setHoveredCategory(null)
-      setSubmenuPosition(null)
-    }, 150) // Small delay to allow moving to submenu
-  }
+      setHoveredCategory(null);
+      setSubmenuPosition(null);
+    }, 150); // Small delay to allow moving to submenu
+  };
 
   const handleSubmenuMouseEnter = () => {
     if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
+      clearTimeout(hoverTimeoutRef.current);
     }
-  }
+  };
 
   const handleSubmenuMouseLeave = () => {
-    setHoveredCategory(null)
-    setSubmenuPosition(null)
-  }
+    setHoveredCategory(null);
+    setSubmenuPosition(null);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -92,33 +91,33 @@ const CategorySelector = ({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false)
-        setHoveredCategory(null)
-        setSubmenuPosition(null)
+        setIsOpen(false);
+        setHoveredCategory(null);
+        setSubmenuPosition(null);
       }
-    }
+    };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
+        clearTimeout(hoverTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const hoveredCategoryData = CATEGORIES.find(
     (cat) => cat.name === hoveredCategory,
-  )
+  );
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -129,10 +128,12 @@ const CategorySelector = ({
         className="h-9 w-full rounded-md border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none dark:bg-input/30 disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between"
       >
         <span className={value ? '' : 'text-neutral-500 dark:text-neutral-400'}>
-          {escapeHtml(value || 'None')}
+          {value || 'None'}
         </span>
         <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform ${
+            isOpen ? 'rotate-180' : ''
+          }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -172,7 +173,7 @@ const CategorySelector = ({
                   onClick={() => handleSelect(category.name)}
                 >
                   <div className="px-2 py-1.5 text-sm font-medium flex items-center justify-between">
-                    <span>{escapeHtml(category.name)}</span>
+                    <span>{category.name}</span>
                     {category.children.length > 0 && (
                       <svg
                         className="w-4 h-4 text-neutral-400"
@@ -210,7 +211,7 @@ const CategorySelector = ({
               >
                 <div className="p-1">
                   <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800 mb-1">
-                    {escapeHtml(hoveredCategoryData.name)}
+                    {hoveredCategoryData.name}
                   </div>
                   {hoveredCategoryData.children.map((child) => (
                     <div
@@ -222,7 +223,7 @@ const CategorySelector = ({
                       }`}
                       onClick={() => handleSelect(child)}
                     >
-                      <div className="px-2 py-1.5 text-sm">{escapeHtml(child)}</div>
+                      <div className="px-2 py-1.5 text-sm">{child}</div>
                     </div>
                   ))}
                 </div>
@@ -231,8 +232,7 @@ const CategorySelector = ({
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default CategorySelector
-
+export default CategorySelector;

@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { escapeHtml } from '@/lib/utils'
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean
@@ -78,7 +77,7 @@ const DeleteConfirmationDialog = ({
                   Description:
                 </span>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                  {escapeHtml(transactionDescription)}
+                  {transactionDescription}
                 </p>
               </div>
             )}
