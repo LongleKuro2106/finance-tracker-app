@@ -17,7 +17,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 @Module({
   imports: [
-    // Configure throttler globally, but it will be disabled in dev by DevThrottlerGuard
+    // Configure throttler globally
+    // ThrottlerModule.forRoot() provides THROTTLER_OPTIONS token required by DevThrottlerGuard
+    // Array format is supported in @nestjs/throttler v6.x
     ThrottlerModule.forRoot([
       {
         name: 'default',

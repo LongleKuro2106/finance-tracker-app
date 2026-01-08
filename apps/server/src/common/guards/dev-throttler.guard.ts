@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext, Logger, Inject } from '@nestjs/common';
+import { Injectable, ExecutionContext, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerStorage } from '@nestjs/throttler';
 import type { ThrottlerModuleOptions } from '@nestjs/throttler';
@@ -16,11 +16,9 @@ export class DevThrottlerGuard extends ThrottlerGuard {
   private readonly isRateLimitingEnabled: boolean;
 
   constructor(
-    @Inject('THROTTLER_OPTIONS')
-    protected readonly options: ThrottlerModuleOptions,
-    @Inject('ThrottlerStorage')
-    protected readonly storageService: ThrottlerStorage,
-    protected readonly reflector: Reflector,
+    options: ThrottlerModuleOptions,
+    storageService: ThrottlerStorage,
+    reflector: Reflector,
   ) {
     super(options, storageService, reflector);
     // SECURITY: Rate limiting defaults to enabled in production, disabled in development
