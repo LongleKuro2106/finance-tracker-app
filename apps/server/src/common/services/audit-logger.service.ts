@@ -19,6 +19,7 @@ export interface AuditLogEntry {
   username?: string;
   ipAddress?: string;
   userAgent?: string;
+  requestId?: string; // Request ID for correlation
   details?: Record<string, unknown>;
   timestamp: Date;
 }
@@ -30,6 +31,7 @@ export class AuditLoggerService {
   log(event: AuditLogEntry): void {
     const logMessage = {
       event: event.eventType,
+      requestId: event.requestId, // Include request ID for correlation
       userId: event.userId,
       username: event.username,
       ip: event.ipAddress,
@@ -66,6 +68,7 @@ export class AuditLoggerService {
     username: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): void {
     this.log({
       eventType: AuditEventType.LOGIN_SUCCESS,
@@ -73,6 +76,7 @@ export class AuditLoggerService {
       username,
       ipAddress,
       userAgent,
+      requestId,
       timestamp: new Date(),
     });
   }
@@ -82,12 +86,14 @@ export class AuditLoggerService {
     reason: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): void {
     this.log({
       eventType: AuditEventType.LOGIN_FAILURE,
       username: usernameOrEmail,
       ipAddress,
       userAgent,
+      requestId,
       details: { reason },
       timestamp: new Date(),
     });
@@ -98,6 +104,7 @@ export class AuditLoggerService {
     username: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): void {
     this.log({
       eventType: AuditEventType.ACCOUNT_LOCKED,
@@ -105,6 +112,7 @@ export class AuditLoggerService {
       username,
       ipAddress,
       userAgent,
+      requestId,
       timestamp: new Date(),
     });
   }
@@ -114,11 +122,13 @@ export class AuditLoggerService {
     details: Record<string, unknown>,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): void {
     this.log({
       eventType: AuditEventType.SUSPICIOUS_ACTIVITY,
       ipAddress,
       userAgent,
+      requestId,
       details: { eventType, ...details },
       timestamp: new Date(),
     });

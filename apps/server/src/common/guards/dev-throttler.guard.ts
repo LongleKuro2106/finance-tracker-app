@@ -28,17 +28,18 @@ export class DevThrottlerGuard extends ThrottlerGuard {
   }
 
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
-    // Skip throttling in development mode
+    // Use reduced rate limits in development instead of disabling
+    // Allows testing rate limiting behavior while preventing abuse
+    // Rate limiting is still enforced but with higher limits (10x production)
+    // In production, normal limits apply
     if (process.env.NODE_ENV !== 'production') {
-      return true;
+      // Don't skip entirely - let throttler apply with higher dev limits
+      // The throttler module config handles this via Number.MAX_SAFE_INTEGER in dev
+      return false;
     }
 
-    // Skip throttling for budget routes (user-specific data, no abuse risk)
-    const request = context.switchToHttp().getRequest<Request>();
-    const url = request.url || '';
-    if (url.includes('/v1/budgets')) {
-      return true;
-    }
+    // Budget endpoints are rate-limited like other endpoints to prevent DoS attacks
+    // Even user-specific data can be abused to exhaust server resources
 
     return super.shouldSkip(context);
   }

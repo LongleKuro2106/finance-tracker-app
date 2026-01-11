@@ -8,6 +8,51 @@ import { cn } from "@/lib/utils"
 // Format: { THEME_NAME: { CSS_SELECTOR: CSS_VARIABLE } }
 const THEMES = { light: "", dark: ".dark" } as const
 
+/**
+ * Validate CSS color values to prevent CSS injection
+ * Only allows safe CSS color formats: hex, rgb/rgba, hsl/hsla, or CSS color names
+ */
+function validateColorValue(color: string): boolean {
+  if (!color || typeof color !== 'string') {
+    return false
+  }
+
+  const trimmedColor = color.trim()
+
+  // Allow hex colors: #rgb, #rrggbb, #rrggbbaa
+  if (/^#[0-9a-f]{3,8}$/i.test(trimmedColor)) {
+    return true
+  }
+
+  // Allow rgb/rgba: rgb(255,255,255) or rgba(255,255,255,0.5)
+  if (/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/i.test(trimmedColor)) {
+    return true
+  }
+
+  // Allow hsl/hsla: hsl(120,100%,50%) or hsla(120,100%,50%,0.5)
+  if (/^hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*(,\s*[\d.]+\s*)?\)$/i.test(trimmedColor)) {
+    return true
+  }
+
+  // Allow CSS color names (common safe ones)
+  const safeColorNames = [
+    'transparent', 'currentcolor', 'inherit', 'initial', 'unset',
+    'black', 'white', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta',
+    'gray', 'grey', 'orange', 'purple', 'pink', 'brown', 'navy', 'teal',
+    'lime', 'olive', 'maroon', 'silver', 'gold', 'aqua', 'fuchsia'
+  ]
+  if (safeColorNames.includes(trimmedColor.toLowerCase())) {
+    return true
+  }
+
+  // Allow CSS variables: var(--color-name)
+  if (/^var\(--[a-zA-Z0-9_-]+\)$/i.test(trimmedColor)) {
+    return true
+  }
+
+  return false
+}
+
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode
@@ -76,31 +121,95 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  // SAFE: dangerouslySetInnerHTML is used here for CSS injection only
-  // No user input is involved - only predefined theme configs
-  // The id is generated from React.useId() and config is from props
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig?.theme
-      ? itemConfig.theme[theme as keyof typeof itemConfig.theme]
-      : itemConfig?.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
-  )
+  // Validate and sanitize color values before injection
+  // Prevents CSS injection attacks if user-controlled data enters config
+  // Runtime check: ensure config is never user-controlled
+  if (process.env.NODE_ENV === 'production' && typeof config === 'object' && config !== null) {
+    const configString = JSON.stringify(config);
+    // Reject if config contains potentially dangerous patterns
+    if (/javascript:|expression\(|url\(/gi.test(configString)) {
+      console.error('[Chart] Potentially dangerous config detected, rejecting');
+      return null;
+    }
+  }
+  const sanitizedColorConfig = colorConfig
+    .map(([key, itemConfig]) => {
+      if (itemConfig?.theme) {
+        // Validate theme colors
+        const lightColor = itemConfig.theme.light
+        const darkColor = itemConfig.theme.dark
+
+        if (!validateColorValue(lightColor) || !validateColorValue(darkColor)) {
+          console.warn(`[Chart] Invalid color value detected for key "${key}", skipping`)
+          return null
+        }
+
+        return [key, itemConfig] as [string, ChartConfig[string]]
+      }
+
+      if (itemConfig?.color) {
+        // Validate single color
+        if (!validateColorValue(itemConfig.color)) {
+          console.warn(`[Chart] Invalid color value detected for key "${key}", skipping`)
+          return null
+        }
+
+        return [key, itemConfig] as [string, ChartConfig[string]]
+      }
+
+      return null
+    })
+    .filter((item): item is [string, ChartConfig[string]] => item !== null)
+
+  if (!sanitizedColorConfig.length) {
+    return null
+  }
+
+  // SECURITY FIX: Replace dangerouslySetInnerHTML with safer approach
+  // Use React's built-in text node rendering which automatically escapes content
+  const escapedId = id.replace(/[^a-zA-Z0-9_-]/g, '')
+
+  // Generate CSS rules as a safe string
+  const cssRules = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const escapedPrefix = prefix.replace(/[<>'"`]/g, '')
+
+      const cssVars = sanitizedColorConfig
+        .map(([key, itemConfig]): string | null => {
+          const escapedKey = key.replace(/[^a-zA-Z0-9_-]/g, '')
+          let color: string | undefined
+
+          if (itemConfig?.theme) {
+            color = itemConfig.theme[theme as keyof typeof itemConfig.theme]
+          } else if (itemConfig?.color) {
+            color = itemConfig.color
+          }
+
+          if (!color || !validateColorValue(color)) {
+            return null
+          }
+
+          // Additional sanitization: ensure color is safe
+          const safeColor = color.replace(/[<>'"`]/g, '')
+          return `  --color-${escapedKey}: ${safeColor};`
+        })
+        .filter((item): item is string => item !== null)
+        .join('\n')
+
+      if (!cssVars) return null
+
+      return `${escapedPrefix} [data-chart="${escapedId}"] {\n${cssVars}\n}`
+    })
+    .filter(Boolean)
+    .join('\n\n')
+
+  if (!cssRules) {
+    return null
+  }
+
+  // SECURITY: Use React's text node children instead of dangerouslySetInnerHTML
+  // React automatically escapes all text content, preventing XSS
+  return <style suppressHydrationWarning>{cssRules}</style>
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

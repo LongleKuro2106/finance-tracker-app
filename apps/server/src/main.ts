@@ -1,13 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import * as express from 'express';
 import cors from 'cors';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { Request } from 'express';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Configure Express to trust the first proxy hop for accurate client IP extraction
@@ -33,14 +35,41 @@ async function bootstrap() {
       .map((origin) => origin.trim().replace(/\/+$/, ''));
   })();
 
+  // Validate required environment variables in all environments
+  // Ensures configuration errors are caught early, not just in production
+  const requiredEnvVars = [
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'REFRESH_SECRET',
+    'INTERNAL_SECRET',
+  ];
+
+  const missingEnvVars: string[] = [];
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      missingEnvVars.push(envVar);
+    }
+  }
+
+  if (missingEnvVars.length > 0) {
+    const errorMessage =
+      `Missing required environment variables: ${missingEnvVars.join(', ')}. ` +
+      `Please check your .env file or environment configuration.`;
+
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(errorMessage);
+    } else {
+      // In development, warn but don't fail (allows for flexible testing)
+      logger.warn(`⚠️  WARNING: ${errorMessage}`);
+      logger.warn(
+        '⚠️  Application may not function correctly without these variables.',
+      );
+    }
+  }
+
   // Shared secret for authenticating server-to-server requests
   // Prevents external clients from spoofing internal request headers
   const internalSecret = process.env.INTERNAL_SECRET;
-  if (!internalSecret && process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'INTERNAL_SECRET environment variable is required in production',
-    );
-  }
 
   // Access underlying Express instance for direct middleware control
   const expressApp = app.getHttpAdapter().getInstance();
@@ -90,8 +119,12 @@ async function bootstrap() {
           });
         }
 
-        // Set permissive CORS headers for internal requests
-        // Wildcard origin acceptable for server-to-server (no credentials required)
+        // Set permissive CORS headers for authenticated internal requests only
+        // Wildcard origin acceptable for server-to-server (no credentials sent with wildcard)
+        // Safe because:
+        // 1. Request is authenticated via X-Internal-Secret header
+        // 2. No credentials (cookies/auth headers) are sent with wildcard origin
+        // 3. Only applies to server-to-server communication (no Origin header)
         res.header('Access-Control-Allow-Origin', '*');
         // Credentials header omitted: internal requests use proxy-based authentication
 
@@ -178,6 +211,10 @@ async function bootstrap() {
     }),
   );
 
+  // Global exception filter to prevent stack trace exposure
+  // Ensures error responses never include stack traces or internal details
+  app.useGlobalFilters(new HttpExceptionFilter());
+
   // Security headers middleware: HTTP security policy enforcement
   app.use(
     helmet({
@@ -209,13 +246,13 @@ async function bootstrap() {
   // Graceful shutdown handler: process signal management
   // Handles SIGTERM (container orchestration) and SIGINT (interactive termination)
   const gracefulShutdown = async (signal: string) => {
-    console.log(`\n${signal} received. Starting graceful shutdown...`);
+    logger.log(`${signal} received. Starting graceful shutdown...`);
     try {
       await app.close();
-      console.log('Application closed successfully');
+      logger.log('Application closed successfully');
       process.exit(0);
     } catch (error) {
-      console.error('Error during graceful shutdown:', error);
+      logger.error('Error during graceful shutdown', error as Error);
       process.exit(1);
     }
   };
@@ -231,14 +268,16 @@ async function bootstrap() {
   process.on(
     'unhandledRejection',
     (reason: unknown, promise: Promise<unknown>) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error(
+        `Unhandled Rejection at: ${String(promise)} reason: ${String(reason)}`,
+      );
       void gracefulShutdown('unhandledRejection');
     },
   );
 
   // Uncaught exception handler: prevent application crash
   process.on('uncaughtException', (error: Error) => {
-    console.error('Uncaught Exception:', error);
+    logger.error('Uncaught Exception', error);
     void gracefulShutdown('uncaughtException');
   });
 }

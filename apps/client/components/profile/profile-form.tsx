@@ -7,6 +7,7 @@ import EditPasswordDialog from './edit-password-dialog'
 import DeleteAccountDialog from './delete-account-dialog'
 import { useRouter } from 'next/navigation'
 import { useDialog } from '@/hooks/use-dialog'
+import { sanitizeUserInput } from '@/lib/sanitize'
 
 interface ProfileFormProps {
   username: string
@@ -82,7 +83,7 @@ const ProfileForm = ({ username, email }: ProfileFormProps) => {
           </label>
           <Input
             type="text"
-            value={username}
+            value={sanitizeUserInput(username)}
             disabled
             className="bg-neutral-50 dark:bg-neutral-800 cursor-not-allowed"
           />
@@ -99,7 +100,7 @@ const ProfileForm = ({ username, email }: ProfileFormProps) => {
           <div className="flex items-center gap-2">
             <Input
               type="email"
-              value={email}
+              value={sanitizeUserInput(email)}
               disabled
               className="bg-neutral-50 dark:bg-neutral-800 cursor-not-allowed flex-1"
             />

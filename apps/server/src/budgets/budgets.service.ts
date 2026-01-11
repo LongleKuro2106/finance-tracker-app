@@ -4,9 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma as PrismaClient } from '@prisma/client';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 import { PreserveBudgetDto } from './dto/preserve-budget.dto';
+import { validateUUID } from '../common/utils/validation.util';
 
 @Injectable()
 export class BudgetsService {
@@ -66,6 +68,9 @@ export class BudgetsService {
     spent: number;
     budget: number;
   }> {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {
@@ -108,6 +113,9 @@ export class BudgetsService {
    * Create a new budget for a user
    */
   async create(userId: string, dto: CreateBudgetDto) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     this.validateDateNotInPast(dto.month, dto.year);
 
     // Check if budget already exists
@@ -148,28 +156,101 @@ export class BudgetsService {
 
   /**
    * Get all budgets for a user
+   * Uses database-level aggregation instead of loading all expenses
+   * Prevents memory exhaustion and improves performance for users with many transactions
    */
   async findAll(userId: string) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budgets = await this.prisma.budget.findMany({
       where: { userId },
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
 
-    // Get status for each budget
-    const budgetsWithStatus = await Promise.all(
-      budgets.map(async (budget) => {
-        const status = await this.checkBudgetStatus(
-          userId,
-          budget.month,
-          budget.year,
-        );
-        return {
-          ...budget,
-          amount: budget.amount.toNumber(),
-          status,
-        };
-      }),
-    );
+    if (budgets.length === 0) {
+      return [];
+    }
+
+    // Use database-level aggregation instead of loading all expenses into memory
+    // Prevents memory exhaustion and DoS attacks with large datasets
+    const expenseMap = new Map<string, number>();
+
+    if (budgets.length > 0) {
+      // Find the earliest and latest dates across all budgets
+      const dates = budgets.map((budget) => ({
+        start: new Date(budget.year, budget.month - 1, 1),
+        end: new Date(budget.year, budget.month, 0), // Last day of the month
+      }));
+
+      const earliestDate = new Date(
+        Math.min(...dates.map((d) => d.start.getTime())),
+      );
+      const latestDate = new Date(
+        Math.max(...dates.map((d) => d.end.getTime())),
+      );
+
+      // Use Prisma.sql for explicit parameterization to prevent SQL injection
+      // Prevents loading all transactions into memory and uses efficient database aggregation
+      const expenseAggregations = await this.prisma.$queryRaw<
+        Array<{
+          year: number;
+          month: number;
+          total: bigint;
+        }>
+      >(
+        PrismaClient.sql`
+          SELECT
+            EXTRACT(YEAR FROM date)::integer AS year,
+            EXTRACT(MONTH FROM date)::integer AS month,
+            SUM(amount) AS total
+          FROM "Transaction"
+          WHERE "userId" = ${userId}::uuid
+            AND type = 'expense'
+            AND date >= ${earliestDate}::date
+            AND date <= ${latestDate}::date
+          GROUP BY year, month
+        `,
+      );
+
+      // Map aggregated results by month/year (minimal data processing)
+      expenseAggregations.forEach((agg) => {
+        const budgetKey = `${agg.year}-${agg.month}`;
+        const amount = Number(agg.total);
+        expenseMap.set(budgetKey, amount);
+      });
+    }
+
+    // Calculate status in memory using cached expense totals
+    const budgetsWithStatus = budgets.map((budget) => {
+      const budgetKey = `${budget.year}-${budget.month}`;
+      const spent = expenseMap.get(budgetKey) || 0;
+      const budgetAmount = budget.amount.toNumber();
+      const exceeded = spent > budgetAmount;
+
+      let message: string | undefined;
+      if (exceeded) {
+        const overAmount = spent - budgetAmount;
+        message = `Budget exceeded! You've spent $${spent.toFixed(2)} out of $${budgetAmount.toFixed(2)}. You are $${overAmount.toFixed(2)} over budget.`;
+      } else {
+        const remaining = budgetAmount - spent;
+        const percentage = (spent / budgetAmount) * 100;
+        if (percentage >= 90) {
+          message = `Warning: You've used ${percentage.toFixed(1)}% of your budget. $${remaining.toFixed(2)} remaining.`;
+        }
+      }
+
+      return {
+        ...budget,
+        amount: budgetAmount,
+        status: {
+          exceeded,
+          message,
+          spent,
+          budget: budgetAmount,
+        },
+      };
+    });
 
     return budgetsWithStatus;
   }
@@ -178,6 +259,9 @@ export class BudgetsService {
    * Get a specific budget by month/year
    */
   async findOne(userId: string, month: number, year: number) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {
@@ -210,6 +294,9 @@ export class BudgetsService {
     year: number,
     dto: UpdateBudgetDto,
   ) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {
@@ -263,6 +350,9 @@ export class BudgetsService {
    * Delete a budget
    */
   async remove(userId: string, month: number, year: number) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {
@@ -300,6 +390,9 @@ export class BudgetsService {
     year: number,
     dto: PreserveBudgetDto,
   ) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {
@@ -376,6 +469,9 @@ export class BudgetsService {
    * Toggle preserve to next month setting for a budget
    */
   async togglePreserve(userId: string, month: number, year: number) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const budget = await this.prisma.budget.findUnique({
       where: {
         userId_month_year: {

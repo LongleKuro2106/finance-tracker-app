@@ -12,6 +12,66 @@ const styleSrc = isProduction
   ? "style-src 'self'"
   : "style-src 'self' 'unsafe-inline'"; // 'unsafe-inline' needed for Tailwind in dev mode
 
+// Build-time validation to prevent unsafe CSP directives in production
+// Prevents accidental deployment of development CSP settings
+if (isProduction) {
+  if (scriptSrc.includes('unsafe-eval') || scriptSrc.includes('unsafe-inline')) {
+    throw new Error(
+      'SECURITY VIOLATION: Unsafe CSP directives (unsafe-eval, unsafe-inline) detected in production build. ' +
+      'This is a critical security vulnerability. Please check your Next.js configuration.',
+    );
+  }
+  if (styleSrc.includes('unsafe-inline')) {
+    throw new Error(
+      'SECURITY VIOLATION: Unsafe CSP directive (unsafe-inline) detected in production build. ' +
+      'This is a security vulnerability. Please check your Next.js configuration.',
+    );
+  }
+
+  // Build-time validation to prevent localhost/127.0.0.1 in production
+  // Prevents exposing internal infrastructure URLs in the client bundle
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl || apiBaseUrl.trim() === '') {
+    throw new Error(
+      'SECURITY ERROR: NEXT_PUBLIC_API_BASE_URL is required in production. ' +
+      'Please set this environment variable to your production API URL.',
+    );
+  }
+
+  const normalizedApiUrl = apiBaseUrl.trim().toLowerCase();
+  if (
+    normalizedApiUrl.includes('localhost') ||
+    normalizedApiUrl.includes('127.0.0.1') ||
+    normalizedApiUrl.includes('0.0.0.0') ||
+    normalizedApiUrl.startsWith('http://') // HTTP is insecure in production
+  ) {
+    throw new Error(
+      'SECURITY VIOLATION: NEXT_PUBLIC_API_BASE_URL contains localhost, 127.0.0.1, 0.0.0.0, or uses HTTP in production. ' +
+      'This exposes internal infrastructure and is a critical security vulnerability. ' +
+      'Please set NEXT_PUBLIC_API_BASE_URL to a valid HTTPS production URL.',
+    );
+  }
+
+  // Validate URL format
+  try {
+    const url = new URL(apiBaseUrl);
+    if (url.protocol !== 'https:') {
+      throw new Error(
+        'SECURITY VIOLATION: NEXT_PUBLIC_API_BASE_URL must use HTTPS in production. ' +
+        'HTTP is insecure and allows man-in-the-middle attacks.',
+      );
+    }
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        'SECURITY ERROR: NEXT_PUBLIC_API_BASE_URL is not a valid URL. ' +
+        'Please provide a valid HTTPS URL (e.g., https://api.example.com).',
+      );
+    }
+    throw error;
+  }
+}
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -21,7 +81,9 @@ const securityHeaders = [
       styleSrc,
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'} https://*`, // Allow API calls to backend
+      // Only allow connections to self and the configured API base URL
+      // Removed overly permissive https://* wildcard for stricter CSP
+      `connect-src 'self' ${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

@@ -50,7 +50,12 @@ export class AuthService {
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
-  async signup(input: SignupInput, ipAddress?: string, userAgent?: string) {
+  async signup(
+    input: SignupInput,
+    ipAddress?: string,
+    userAgent?: string,
+    requestId?: string,
+  ) {
     const existing = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -62,8 +67,9 @@ export class AuthService {
     if (existing)
       throw new ConflictException('Username or email already exists');
 
+    // Use bcrypt cost factor 12 for password hashing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const passwordHash: string = (await hash(input.password, 10)) as string;
+    const passwordHash: string = (await hash(input.password, 12)) as string;
 
     const created: User = await this.prisma.user.create({
       data: {
@@ -94,6 +100,7 @@ export class AuthService {
       username: created.username,
       ipAddress,
       userAgent,
+      requestId,
       timestamp: new Date(),
     });
 
@@ -108,6 +115,7 @@ export class AuthService {
     input: LoginInput,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -130,6 +138,7 @@ export class AuthService {
         'Account locked due to too many failed attempts',
         ipAddress,
         userAgent,
+        requestId,
       );
       throw new ThrottlerException(
         'Account temporarily locked due to too many failed login attempts. Please try again in 15 minutes.',
@@ -137,7 +146,8 @@ export class AuthService {
     }
 
     if (!user) {
-      // Record failed attempt even if user doesn't exist (to prevent enumeration)
+      // Prevent user enumeration through timing attacks
+      // Record failed attempt even if user doesn't exist
       await this.accountLockoutService.recordFailedAttempt(
         input.usernameOrEmail,
       );
@@ -146,7 +156,16 @@ export class AuthService {
         'Invalid username or email',
         ipAddress,
         userAgent,
+        requestId,
       );
+
+      // Use constant delay to prevent timing-based user enumeration
+      // Constant delay is more effective than random delay against statistical timing attacks
+      // Perform dummy bcrypt comparison to normalize timing regardless of user existence
+      const dummyHash = '$2b$12$dummy.hash.for.timing.attack.prevention.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+      await compare('dummy', dummyHash); // Constant-time operation to normalize timing
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Constant 100ms delay
+
       throw new UnauthorizedException(
         'You have entered an invalid username or password',
       );
@@ -170,6 +189,7 @@ export class AuthService {
         'Invalid password',
         ipAddress,
         userAgent,
+        requestId,
       );
 
       // Check if account just got locked
@@ -179,14 +199,20 @@ export class AuthService {
           user.username,
           ipAddress,
           userAgent,
+          requestId,
         );
         throw new ThrottlerException(
           'Account temporarily locked due to too many failed login attempts. Please try again in 15 minutes.',
         );
       }
 
+      // Use generic error message to prevent information disclosure
+      // Log remaining attempts server-side only for monitoring
+      this.logger.warn(
+        `Failed login attempt for user ${user.id}. ${lockoutResult.remainingAttempts} attempt(s) remaining.`,
+      );
       throw new UnauthorizedException(
-        `You have entered an invalid username or password. ${lockoutResult.remainingAttempts} attempt(s) remaining.`,
+        'You have entered an invalid username or password',
       );
     }
 
@@ -221,6 +247,7 @@ export class AuthService {
       updated.username,
       ipAddress,
       userAgent,
+      requestId,
     );
 
     return {
@@ -235,6 +262,7 @@ export class AuthService {
     refreshToken: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): Promise<{
     accessToken: string;
     refreshToken: string;
@@ -248,6 +276,7 @@ export class AuthService {
         { ipAddress, userAgent },
         ipAddress,
         userAgent,
+        requestId,
       );
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
@@ -311,6 +340,7 @@ export class AuthService {
     refreshToken?: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ): Promise<void> {
     // Revoke all refresh tokens for this user
     await this.refreshTokenService.revokeAllUserTokens(userId);
@@ -327,6 +357,7 @@ export class AuthService {
       userId,
       ipAddress,
       userAgent,
+      requestId,
       details: { reason: 'logout' },
       timestamp: new Date(),
     });
@@ -414,10 +445,11 @@ export class AuthService {
     }
 
     if (updateData.password !== undefined) {
+      // Use bcrypt cost factor 12 for password hashing
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       updatePayload.passwordHash = (await hash(
         updateData.password,
-        10,
+        12,
       )) as string;
     }
 
@@ -445,6 +477,7 @@ export class AuthService {
     password: string,
     ipAddress?: string,
     userAgent?: string,
+    requestId?: string,
   ) {
     // Get current user to verify password
     const currentUser = await this.prisma.user.findUnique({
@@ -473,6 +506,7 @@ export class AuthService {
       username: currentUser.username,
       ipAddress,
       userAgent,
+      requestId,
       timestamp: new Date(),
     };
     this.auditLogger.log(auditEntry);

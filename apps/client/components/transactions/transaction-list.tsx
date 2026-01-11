@@ -7,6 +7,7 @@ import { formatCategoryDisplayParts } from '@/lib/category-utils'
 import EditTransactionForm from './edit-transaction-form'
 import DeleteConfirmationDialog from './delete-confirmation-dialog'
 import { useTransactions } from '@/hooks/use-transactions'
+import { sanitizeForDisplay } from '@/lib/sanitize'
 
 interface TransactionListProps {
   refreshKey?: number
@@ -85,7 +86,7 @@ const TransactionItem = memo(
           </div>
           {transaction.description && (
             <p className="text-sm text-neutral-700 dark:text-neutral-100 mt-1">
-              {transaction.description}
+              {sanitizeForDisplay(transaction.description)}
             </p>
           )}
           <p className="text-xs text-neutral-500 dark:text-neutral-300 mt-1">

@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -29,6 +30,9 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500, {
+    message: 'Description must not exceed 500 characters',
+  })
   @Transform(({ value }) => {
     if (typeof value === 'string' && value) {
       return DOMPurify.sanitize(value);

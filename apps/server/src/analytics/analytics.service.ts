@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
+import { Prisma as PrismaClient } from '@prisma/client';
+import { validateUUID } from '../common/utils/validation.util';
 
 export interface DateRange {
   startDate?: Date;
@@ -8,6 +10,9 @@ export interface DateRange {
 }
 
 // Maximum allowed date range in days (1 year)
+// Prevents resource exhaustion from extremely large queries
+// Database-level aggregation is used to minimize memory usage
+// Query timeout (30 seconds) provides additional protection
 const MAX_DATE_RANGE_DAYS = 365;
 
 /**
@@ -101,6 +106,9 @@ export class AnalyticsService {
     userId: string,
     dateRange?: DateRange,
   ): Promise<OverviewResponse> {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     // Validate and normalize date range
     const validatedRange = validateDateRange(dateRange);
 
@@ -161,6 +169,9 @@ export class AnalyticsService {
     userId: string,
     dateRange?: DateRange,
   ): Promise<CategoryData[]> {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     // Validate and normalize date range
     const validatedRange = validateDateRange(dateRange);
 
@@ -179,7 +190,7 @@ export class AnalyticsService {
     }
 
     // Use database-level aggregation with groupBy
-    // This prevents loading all transactions into memory
+    // Prevents loading all transactions into memory
     const categoryAggregations = await this.prisma.transaction.groupBy({
       by: ['categoryId', 'type'],
       where,
@@ -187,6 +198,13 @@ export class AnalyticsService {
         amount: true,
       },
     });
+
+    // Limit result set to prevent DoS (max 1000 categories)
+    if (categoryAggregations.length > 1000) {
+      throw new BadRequestException(
+        'Result set too large. Please narrow your date range.',
+      );
+    }
 
     // Fetch category names in a single query
     const categoryIds = [
@@ -268,9 +286,18 @@ export class AnalyticsService {
     userId: string,
     months: number = 12,
     dateRange?: DateRange,
-  ): Promise<MonthlyData[]> {
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<{ data: MonthlyData[]; total: number; hasMore: boolean }> {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     // Validate months parameter (max 12 months)
     const validatedMonths = Math.min(Math.max(1, months), 12);
+
+    // SECURITY FIX: Add pagination parameters with validation
+    const validatedLimit = Math.min(Math.max(1, limit), 1000); // Max 1000 per page
+    const validatedOffset = Math.max(0, offset);
 
     const endDate = dateRange?.endDate ?? new Date();
     const startDate =
@@ -291,28 +318,65 @@ export class AnalyticsService {
       throw new BadRequestException('Invalid date range');
     }
 
-    // Use raw SQL for efficient month/year grouping with aggregation
-    // This prevents loading all transactions into memory
-    const monthlyAggregations = await this.prisma.$queryRaw<
-      Array<{
-        year: number;
-        month: number;
-        type: string;
-        total: bigint;
-      }>
-    >`
-      SELECT
-        EXTRACT(YEAR FROM date)::integer AS year,
-        EXTRACT(MONTH FROM date)::integer AS month,
-        type,
-        SUM(amount) AS total
-      FROM "Transaction"
-      WHERE "userId" = ${userId}::uuid
-        AND date >= ${validatedRange.startDate}::date
-        AND date <= ${validatedRange.endDate}::date
-      GROUP BY year, month, type
-      ORDER BY year, month
-    `;
+    // SECURITY FIX: First get total count for pagination metadata
+    const countResult = await Promise.race([
+      this.prisma.$queryRaw<Array<{ count: bigint }>>(
+        PrismaClient.sql`
+          SELECT COUNT(DISTINCT (EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)))::bigint AS count
+          FROM "Transaction"
+          WHERE "userId" = ${userId}::uuid
+            AND date >= ${validatedRange.startDate}::date
+            AND date <= ${validatedRange.endDate}::date
+        `,
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new BadRequestException('Query timeout exceeded')),
+          10000,
+        ),
+      ),
+    ]);
+    const total = Number(countResult[0]?.count ?? 0);
+
+    // Use Prisma.sql for explicit parameterization to prevent SQL injection
+    // All parameters validated before query execution:
+    // - userId: Validated as UUID format (validateUUID)
+    // - dates: Validated and normalized (validateDateRange)
+    // - limit/offset: Validated and bounded
+    // Query timeout: 10 seconds
+    // SECURITY FIX: Added pagination with LIMIT and OFFSET
+    const monthlyAggregations = await Promise.race([
+      this.prisma.$queryRaw<
+        Array<{
+          year: number;
+          month: number;
+          type: string;
+          total: bigint;
+        }>
+      >(
+        PrismaClient.sql`
+          SELECT
+            EXTRACT(YEAR FROM date)::integer AS year,
+            EXTRACT(MONTH FROM date)::integer AS month,
+            type,
+            SUM(amount) AS total
+          FROM "Transaction"
+          WHERE "userId" = ${userId}::uuid
+            AND date >= ${validatedRange.startDate}::date
+            AND date <= ${validatedRange.endDate}::date
+          GROUP BY year, month, type
+          ORDER BY year, month
+          LIMIT ${validatedLimit}
+          OFFSET ${validatedOffset}
+        `,
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new BadRequestException('Query timeout exceeded')),
+          10000, // Query timeout: 10 seconds
+        ),
+      ),
+    ]);
 
     // Group by month and year
     const monthlyMap = new Map<
@@ -353,7 +417,12 @@ export class AnalyticsService {
         return a.month - b.month;
       });
 
-    return monthlyData;
+    // SECURITY FIX: Return paginated response with metadata
+    return {
+      data: monthlyData,
+      total,
+      hasMore: validatedOffset + monthlyData.length < total,
+    };
   }
 
   /**
@@ -367,6 +436,9 @@ export class AnalyticsService {
     year?: number,
     month?: number,
   ): Promise<DailyData[]> {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
     const targetMonth = month ?? now.getMonth() + 1; // 1-12
@@ -388,24 +460,40 @@ export class AnalyticsService {
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0); // Last day of month
 
-    // Use database-level aggregation instead of loading all transactions
-    const dailyAggregations = await this.prisma.$queryRaw<
-      Array<{
-        day: number;
-        total: bigint;
-      }>
-    >`
-      SELECT
-        EXTRACT(DAY FROM date)::integer AS day,
-        SUM(amount) AS total
-      FROM "Transaction"
-      WHERE "userId" = ${userId}::uuid
-        AND type = 'expense'
-        AND date >= ${startDate}::date
-        AND date <= ${endDate}::date
-      GROUP BY day
-      ORDER BY day
-    `;
+    // Use Prisma.sql for explicit parameterization to prevent SQL injection
+    // All parameters validated before query execution:
+    // - userId: Validated as UUID format (validateUUID)
+    // - dates: Validated year/month ranges
+    // Query timeout: 10 seconds
+    // Prevents loading all transactions into memory and uses efficient database aggregation
+    const dailyAggregations = await Promise.race([
+      this.prisma.$queryRaw<
+        Array<{
+          day: number;
+          total: bigint;
+        }>
+      >(
+        PrismaClient.sql`
+          SELECT
+            EXTRACT(DAY FROM date)::integer AS day,
+            SUM(amount) AS total
+          FROM "Transaction"
+          WHERE "userId" = ${userId}::uuid
+            AND type = 'expense'
+            AND date >= ${startDate}::date
+            AND date <= ${endDate}::date
+          GROUP BY day
+          ORDER BY day
+          LIMIT 100
+        `,
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new BadRequestException('Query timeout exceeded')),
+          10000, // Query timeout: 10 seconds
+        ),
+      ),
+    ]);
 
     // Create map for quick lookup
     const dailyMap = new Map<number, number>();

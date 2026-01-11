@@ -31,13 +31,12 @@ export class UserBasedThrottlerGuard extends ThrottlerGuard {
   }
 
   /**
-   * Skip throttling in development mode for easier testing.
+   * Always enforce throttling; dev uses higher limits configured in ThrottlerModule.
+   * Avoids accidentally disabling rate limits if NODE_ENV is misconfigured.
    */
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
-    if (process.env.NODE_ENV !== 'production') {
-      return true;
-    }
-    return super.shouldSkip(context);
+    void context;
+    return false;
   }
 
   /**

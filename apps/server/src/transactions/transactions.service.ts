@@ -10,6 +10,12 @@ import {
   filtersToPrismaWhere,
   sortToPrismaOrderBy,
 } from '../common/utils/query-parser.util';
+import {
+  isValidUUID,
+  validateUUID,
+  validateCategoryName,
+  sanitizeCategoryName,
+} from '../common/utils/validation.util';
 
 // Helper function to format Decimal amounts to string with 2 decimal places
 function formatAmount(amount: string | number | Decimal): string {
@@ -23,13 +29,6 @@ function formatAmount(amount: string | number | Decimal): string {
     return '0.00';
   }
   return num.toFixed(2);
-}
-
-// Helper function to validate UUID format
-function isValidUUID(id: string): boolean {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(id);
 }
 
 // Helper function to format transaction response
@@ -50,13 +49,17 @@ export class TransactionsService {
   ) {}
 
   async listUserTransactions(userId: string, opts: QueryOptions) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     const where: Prisma.TransactionWhereInput = {
       userId: userId,
     };
 
     // Apply filters from query language
+    // Pass allowed filter fields for additional validation
     if (opts.filters && opts.filters.length > 0) {
-      Object.assign(where, filtersToPrismaWhere(opts.filters));
+      Object.assign(where, filtersToPrismaWhere(opts.filters, opts.allowedFilterFields));
     }
 
     // Determine pagination method
@@ -79,14 +82,19 @@ export class TransactionsService {
       skip = undefined;
     }
 
-    // Apply sorting
+    // Apply sorting with whitelist validation
     const orderBy =
       opts.sort && opts.sort.length > 0
-        ? (sortToPrismaOrderBy(opts.sort) as
+        ? (sortToPrismaOrderBy(
+            opts.sort,
+            opts.allowedSortFields,
+          ) as
             | Prisma.TransactionOrderByWithRelationInput
             | Prisma.TransactionOrderByWithRelationInput[])
         : ({ id: 'desc' } as Prisma.TransactionOrderByWithRelationInput); // Default: most recent first
 
+    // Remove unnecessary user data from transaction list responses
+    // User is already authenticated and known, so including user data is redundant
     const items = await this.prisma.transaction.findMany({
       where,
       orderBy,
@@ -95,13 +103,7 @@ export class TransactionsService {
       ...(cursor ? { cursor } : {}),
       include: {
         category: true, // Include category if exists
-        user: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
+        // User data removed - user is already authenticated and known from JWT token
       },
     });
 
@@ -136,6 +138,9 @@ export class TransactionsService {
   }
 
   async createForUser(userId: string, dto: CreateTransactionDto) {
+    // Validate userId UUID format (defense in depth)
+    validateUUID(userId, 'User ID');
+
     // Normalize date to start of day (00:00:00Z) for date-only storage
     const transactionDate = new Date(dto.date);
     transactionDate.setUTCHours(0, 0, 0, 0);
@@ -143,7 +148,13 @@ export class TransactionsService {
     // Resolve category name to ID
     // If no category provided, default to "Uncategorized" so transactions appear in charts
     const categoryNameToUse = dto.categoryName || 'Uncategorized';
-    const category = await this.categoriesService.findByName(categoryNameToUse);
+
+    // Validate and sanitize category name before database lookup
+    if (dto.categoryName) {
+      validateCategoryName(dto.categoryName);
+    }
+    const sanitizedCategoryName = sanitizeCategoryName(categoryNameToUse);
+    const category = await this.categoriesService.findByName(sanitizedCategoryName);
     const categoryId = category.id;
 
     const created = await this.prisma.transaction.create({
@@ -163,10 +174,9 @@ export class TransactionsService {
   }
 
   async updateForUser(userId: string, id: string, dto: UpdateTransactionDto) {
-    // Validate UUID format first
-    if (!isValidUUID(id)) {
-      throw new NotFoundException('Transaction not found or unauthorized');
-    }
+    // Validate UUID formats (defense in depth)
+    validateUUID(userId, 'User ID');
+    validateUUID(id, 'Transaction ID');
 
     try {
       // First verify the transaction exists and belongs to the user
@@ -207,8 +217,11 @@ export class TransactionsService {
             await this.categoriesService.findByName('Uncategorized');
           updateData.category = { connect: { id: category.id } };
         } else {
+          // Validate and sanitize category name before database lookup
+          validateCategoryName(dto.categoryName);
+          const sanitizedCategoryName = sanitizeCategoryName(dto.categoryName);
           const category = await this.categoriesService.findByName(
-            dto.categoryName,
+            sanitizedCategoryName,
           );
           updateData.category = { connect: { id: category.id } };
         }
@@ -247,10 +260,9 @@ export class TransactionsService {
   }
 
   async deleteForUser(userId: string, id: string) {
-    // Validate UUID format first
-    if (!isValidUUID(id)) {
-      throw new NotFoundException('Transaction not found or unauthorized');
-    }
+    // Validate UUID formats (defense in depth)
+    validateUUID(userId, 'User ID');
+    validateUUID(id, 'Transaction ID');
 
     try {
       // First verify the transaction exists and belongs to the user

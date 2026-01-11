@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { sanitizeForDisplay } from '@/lib/sanitize'
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean
@@ -77,7 +78,7 @@ const DeleteConfirmationDialog = ({
                   Description:
                 </span>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                  {transactionDescription}
+                  {sanitizeForDisplay(transactionDescription)}
                 </p>
               </div>
             )}

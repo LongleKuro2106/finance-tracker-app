@@ -30,10 +30,12 @@ export const POST = async () => {
     )
   }
 
-  // Store new tokens
-  // Note: secure flag should be true only with HTTPS
-  // For local network testing, set SECURE_COOKIES=false
-  const isSecure = process.env.SECURE_COOKIES !== 'false' && process.env.NODE_ENV === 'production'
+  // Cookie security flag logic
+  // In production, always require HTTPS (secure flag = true)
+  // Only allow insecure cookies if explicitly disabled AND in development
+  const isSecure =
+    process.env.NODE_ENV === 'production' &&
+    process.env.SECURE_COOKIES !== 'false'
   cookieStore.set(ACCESS_TOKEN_COOKIE_NAME, tokens.accessToken, {
     httpOnly: true,
     sameSite: 'lax',

@@ -22,16 +22,14 @@ import { parseQuery } from '../common/utils/query-parser.util';
 @UseGuards(JwtAuthGuard, DevThrottlerGuard)
 @Throttle({
   default: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 200 : Number.MAX_SAFE_INTEGER,
+    limit: process.env.NODE_ENV === 'production' ? 200 : 2000, // 10x in dev
     ttl: 60_000,
   },
   long: {
-    limit:
-      process.env.NODE_ENV === 'production' ? 1000 : Number.MAX_SAFE_INTEGER,
+    limit: process.env.NODE_ENV === 'production' ? 1000 : 10000, // 10x in dev
     ttl: 3_600_000,
   },
-}) // 200 requests per minute, 1000 requests per hour in production
+}) // 200 requests/min (2000 in dev), 1000/hour (10000 in dev) in production
 @Controller('v1/transactions')
 export class TransactionsController {
   constructor(private readonly service: TransactionsService) {}
@@ -41,16 +39,37 @@ export class TransactionsController {
     @Req() req: { user: { userId: string } },
     @Query() query: Record<string, string | undefined>,
   ) {
-    // Parse query language (pagination, sorting, filtering)
-    const queryOptions = parseQuery(query, [
+    // Define allowed fields for filtering
+    const allowedFilterFields = [
       'type',
       'categoryId',
       'date',
       'amount',
       'description',
-    ]);
+    ];
 
-    return this.service.listUserTransactions(req.user.userId, queryOptions);
+    // Define allowed fields for sorting (subset of transaction fields)
+    const allowedSortFields = [
+      'id',
+      'date',
+      'amount',
+      'type',
+      'createdAt',
+      'updatedAt',
+    ];
+
+    // Parse query language (pagination, sorting, filtering)
+    const queryOptions = parseQuery(
+      query,
+      allowedFilterFields,
+      allowedSortFields,
+    );
+
+    return this.service.listUserTransactions(
+      req.user.userId,
+      queryOptions,
+      allowedSortFields,
+    );
   }
 
   @Post()

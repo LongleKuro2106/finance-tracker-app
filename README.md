@@ -158,7 +158,7 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 
 - JWT authentication with token rotation
 - HttpOnly cookies for secure token storage
-- Rate limiting on all endpoints: 200 requests/minute, 1000 requests/hour (disabled in development)
+- Rate limiting on all endpoints: 200 requests/minute, 1000 requests/hour (enforced in all environments; development uses higher limits for testing)
 - Input validation and sanitization
 - HTML/Script sanitization (DOMPurify) for user input
 - SQL injection prevention via Prisma ORM
@@ -170,6 +170,12 @@ GET /v1/transactions?page=1&size=20&sort=date:desc,amount:asc&type=eq:expense&am
 - Request deduplication (prevents duplicate API calls)
 - Token refresh caching (reduces unnecessary refresh calls)
 - User-friendly error messages without exposing server internals
+
+### Recent Security Hardening
+- Enforced throttling in development (no skip) with higher limits to mirror production behavior.
+- Stricter category name validation and sanitization to reduce XSS surface.
+- JWT decode helper documented as display-only; authentication decisions remain server-side.
+- Bootstrap logging uses Nest Logger with structured log levels.
 
 ## ⚡ Performance Optimizations
 

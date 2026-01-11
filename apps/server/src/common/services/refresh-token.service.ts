@@ -1,18 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-
-interface RefreshTokenData {
-  userId: string;
-  username: string;
-  tokenVersion: number;
-  expiresAt: Date;
-  createdAt: Date;
-}
 
 @Injectable()
 export class RefreshTokenService {
-  private readonly refreshTokenStore = new Map<string, RefreshTokenData>();
   private readonly REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
   private readonly refreshTokenSecret: string;
 
@@ -27,39 +19,44 @@ export class RefreshTokenService {
     this.refreshTokenSecret = secret;
 
     // Cleanup expired tokens every hour
-    setInterval(() => this.cleanup(), 60 * 60 * 1000);
+    setInterval(() => {
+      void this.cleanup();
+    }, 60 * 60 * 1000);
   }
 
-  generateRefreshToken(
+  async generateRefreshToken(
     userId: string,
     username: string,
     tokenVersion: number,
   ): Promise<string> {
     const expiresAt = new Date(Date.now() + this.REFRESH_TOKEN_EXPIRY_MS);
+    // Use cryptographically secure random number generator
     const tokenId = this.generateTokenId();
 
     const payload = {
-        sub: userId,
-        username,
-        tokenVersion,
-        type: 'refresh',
-        tokenId,
+      sub: userId,
+      username,
+      tokenVersion,
+      type: 'refresh',
+      tokenId,
     };
 
     const refreshToken = jwt.sign(payload, this.refreshTokenSecret, {
-        expiresIn: '7d',
+      expiresIn: '7d',
     });
 
-    // Store token metadata
-    this.refreshTokenStore.set(tokenId, {
-      userId,
-      username,
-      tokenVersion,
-      expiresAt,
-      createdAt: new Date(),
+    // Store token metadata in database instead of in-memory Map
+    await this.prisma.refreshToken.create({
+      data: {
+        id: tokenId,
+        userId,
+        username,
+        tokenVersion,
+        expiresAt,
+      },
     });
 
-    return Promise.resolve(refreshToken);
+    return refreshToken;
   }
 
   async validateRefreshToken(token: string): Promise<{
@@ -95,15 +92,28 @@ export class RefreshTokenService {
         return null;
       }
 
-      // Check if token exists in store
-      const tokenData = this.refreshTokenStore.get(typedPayload.tokenId);
+      // Check if token exists in database
+      const tokenData = await this.prisma.refreshToken.findUnique({
+        where: { id: typedPayload.tokenId },
+      });
+
       if (!tokenData) {
         return null; // Token was revoked or doesn't exist
       }
 
+      // Check if token is revoked
+      if (tokenData.revoked) {
+        return null;
+      }
+
       // Check expiration
       if (tokenData.expiresAt < new Date()) {
-        this.refreshTokenStore.delete(typedPayload.tokenId);
+        // Mark as revoked and delete expired token
+        await this.prisma.refreshToken.delete({
+          where: { id: typedPayload.tokenId },
+        }).catch(() => {
+          // Ignore errors if already deleted
+        });
         return null;
       }
 
@@ -114,7 +124,13 @@ export class RefreshTokenService {
 
       if (!user || (user.tokenVersion ?? 1) !== typedPayload.tokenVersion) {
         // Token version mismatch - user logged out or token rotated
-        this.refreshTokenStore.delete(typedPayload.tokenId);
+        // Mark token as revoked
+        await this.prisma.refreshToken.update({
+          where: { id: typedPayload.tokenId },
+          data: { revoked: true, revokedAt: new Date() },
+        }).catch(() => {
+          // Ignore errors if already deleted
+        });
         return null;
       }
 
@@ -128,18 +144,28 @@ export class RefreshTokenService {
     }
   }
 
-  revokeRefreshToken(tokenId: string): Promise<void> {
-    this.refreshTokenStore.delete(tokenId);
-    return Promise.resolve();
+  async revokeRefreshToken(tokenId: string): Promise<void> {
+    // Revoke token in database
+    await this.prisma.refreshToken.update({
+      where: { id: tokenId },
+      data: { revoked: true, revokedAt: new Date() },
+    }).catch(() => {
+      // Ignore errors if token doesn't exist (already deleted/revoked)
+    });
   }
 
-  revokeAllUserTokens(userId: string): Promise<void> {
-    for (const [tokenId, tokenData] of this.refreshTokenStore.entries()) {
-      if (tokenData.userId === userId) {
-        this.refreshTokenStore.delete(tokenId);
-      }
-    }
-    return Promise.resolve();
+  async revokeAllUserTokens(userId: string): Promise<void> {
+    // Revoke all user tokens in database
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revoked: false,
+      },
+      data: {
+        revoked: true,
+        revokedAt: new Date(),
+      },
+    });
   }
 
   async rotateRefreshToken(
@@ -148,23 +174,37 @@ export class RefreshTokenService {
     username: string,
     newTokenVersion: number,
   ): Promise<string> {
-    // Revoke old token
-    void this.revokeRefreshToken(oldTokenId);
+    // Revoke old token in database before generating new one
+    await this.revokeRefreshToken(oldTokenId);
 
     // Generate new refresh token
     return this.generateRefreshToken(userId, username, newTokenVersion);
   }
 
+  /**
+   * Generate cryptographically secure token ID
+   * Uses crypto.randomBytes() instead of Math.random() to prevent predictable token IDs
+   */
   private generateTokenId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    // Generate 32 bytes (256 bits) of random data and convert to hex string
+    // This provides sufficient entropy for secure token IDs
+    return randomBytes(32).toString('hex');
   }
 
-  private cleanup(): void {
+  /**
+   * Cleanup expired tokens from database
+   * Removes expired tokens to prevent database bloat
+   */
+  private async cleanup(): Promise<void> {
     const now = new Date();
-    for (const [tokenId, tokenData] of this.refreshTokenStore.entries()) {
-      if (tokenData.expiresAt < now) {
-        this.refreshTokenStore.delete(tokenId);
-      }
-    }
+    // Delete expired tokens that are not already revoked
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        expiresAt: {
+          lt: now,
+        },
+        revoked: false,
+      },
+    });
   }
 }
